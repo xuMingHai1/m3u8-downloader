@@ -1,0 +1,11 @@
+# 忽略 idea 配置
+/.idea
+
+# 忽略编译后的目录
+**/target
+
+# 忽略iml
+**/*.iml
+
+# 忽略rebel.xml
+**/rebel.xml
