@@ -1,47 +1,37 @@
-#m3u8-grid-pane {
+#left-view {
+    -fx-border-width: 0 1 0 0;
+    -fx-border-color: -color-base-2;
+    -fx-background-color: -color-base-0;
+}
+
+#app-title-h-box {
+    -fx-spacing: 3;
     -fx-alignment: center;
-    -fx-hgap: 20;
-    -fx-vgap: 30;
 }
 
-#uri-text-area {
-    -fx-max-height: 130;
-    -fx-wrap-text: true;
+#toggle-button-v-box {
+    -fx-spacing: 25;
+    -fx-alignment: top-center;
 }
 
-#http-proxy-port {
-    -fx-pref-width: 100;
+#toggle-button-v-box > .toggle-button {
+    -fx-border-width: 0;
+    -fx-background-color: transparent;
 }
 
-#response-timeout {
-    -fx-pref-width: 80;
+#toggle-button-v-box > .toggle-button:selected {
+    -fx-background-color: -color-base-2;
 }
 
-#directory-link:visited {
-    -fx-text-fill: -color-link-fg;
+#toggle-button-v-box > .toggle-button:hover {
+    -fx-background-color: -color-base-2;
 }
 
-#directory-link:hover {
+#version-link {
+    -fx-text-fill: -color-fg-default;
+    -fx-underline: false;
+}
+
+#version-link:hover {
     -fx-text-fill: -color-accent-7;
-}
-
-#button-h-box {
-    -fx-alignment: center;
-    -fx-spacing: 30;
-}
-
-#progress-bar-stack-pane:success > .progress-bar > .bar {
-    -fx-background-color: -color-success-emphasis;
-}
-
-#progress-bar-stack-pane:success > Text {
-    -fx-fill: -color-light;
-}
-
-#progress-bar-stack-pane:danger > .progress-bar > .bar {
-    -fx-background-color: -color-danger-emphasis;
-}
-
-#progress-bar-stack-pane:danger > Text {
-    -fx-fill: -color-light;
 }

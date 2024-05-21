@@ -1,0 +1,24 @@
+#about-grid-pane {
+    -fx-alignment: center;
+    -fx-hgap: 20;
+    -fx-vgap: 10;
+}
+
+#copyright-h-box {
+    -fx-alignment: center;
+}
+
+#home-link {
+    -fx-text-fill: -color-accent-6;
+    -fx-underline: false;
+}
+
+#home-link:hover {
+    -fx-text-fill: -color-success-3;
+}
+
+
+#qr-code-h-box {
+    -fx-alignment: center;
+    -fx-spacing: 30;
+}

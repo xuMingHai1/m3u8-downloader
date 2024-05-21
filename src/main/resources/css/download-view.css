@@ -1,0 +1,47 @@
+#m3u8-grid-pane {
+    -fx-alignment: center;
+    -fx-hgap: 20;
+    -fx-vgap: 30;
+}
+
+#uri-text-area {
+    -fx-max-height: 130;
+    -fx-wrap-text: true;
+}
+
+#http-proxy-port {
+    -fx-pref-width: 100;
+}
+
+#response-timeout {
+    -fx-pref-width: 80;
+}
+
+#directory-link:visited {
+    -fx-text-fill: -color-link-fg;
+}
+
+#directory-link:hover {
+    -fx-text-fill: -color-accent-7;
+}
+
+#button-h-box {
+    -fx-alignment: center;
+    -fx-spacing: 30;
+}
+
+#progress-bar-stack-pane:success > .progress-bar > .bar {
+    -fx-background-color: -color-success-emphasis;
+}
+
+#progress-bar-stack-pane:success > Text {
+    -fx-fill: -color-light;
+}
+
+#progress-bar-stack-pane:danger > .progress-bar > .bar {
+    -fx-background-color: -color-danger-emphasis;
+}
+
+#progress-bar-stack-pane:danger > Text {
+    -fx-fill: -color-light;
+}
