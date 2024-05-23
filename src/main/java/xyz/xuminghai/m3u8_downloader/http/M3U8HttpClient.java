@@ -30,8 +30,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
@@ -47,6 +50,16 @@ public class M3U8HttpClient implements AutoCloseable {
      * 最大等待时长阈值
      */
     static final Duration MAX_TIMEOUT = Duration.ofSeconds(60L);
+
+    /**
+     * 默认休眠时长
+     */
+    private static final long SLEEP_TIME = 10L;
+
+    private final ConcurrentLinkedQueue<Thread> sleepQueue = new ConcurrentLinkedQueue<>();
+    private final LongAdder networkExceptionCount = new LongAdder();
+    private static final long NETWORK_EXCEPTION_BASE = 20L;
+    private final AtomicLong networkExceptionThreshold = new AtomicLong();
 
     private final Duration timeout;
     private final Path tempDirPath;
@@ -67,38 +80,48 @@ public class M3U8HttpClient implements AutoCloseable {
 
 
     public Path downloadM3U8(URI uri) throws InterruptedException, IOException {
+        networkExceptionThreshold.set(NETWORK_EXCEPTION_BASE);
         final Semaphore semaphore = new Semaphore(1);
-        final HttpSupport httpSupport = headRequest(uri, semaphore);
-        return download(tempDirPath.resolve("index.m3u8"), httpSupport, semaphore);
+        final DownloadHttpRequest downloadHttpRequest = headRequest(uri, semaphore);
+        return download(tempDirPath.resolve("index.m3u8"),
+                downloadHttpRequest, semaphore);
     }
 
     public byte[] downloadKey(URI uri) throws IOException, InterruptedException {
         log.info("开始下载密钥");
+        networkExceptionThreshold.set(NETWORK_EXCEPTION_BASE);
         final Semaphore semaphore = new Semaphore(1);
-        final HttpSupport httpSupport = headRequest(uri, semaphore);
+        final DownloadHttpRequest downloadHttpRequest = headRequest(uri, semaphore);
         final Path aesFilePath = download(tempDirPath.resolve(Instant.now().toEpochMilli() + "-aes-128.key"),
-                httpSupport, semaphore);
+                downloadHttpRequest, semaphore);
         log.info("密钥下载成功，aesFilePath = {}", aesFilePath);
         return Files.readAllBytes(aesFilePath);
     }
 
     public List<Future<TsFile>> downloadTs(List<MediaPlay> playList) {
         log.info("创建ts文件列表下载任务");
-        final Semaphore semaphore = new Semaphore(playList.size());
-        final List<Future<TsFile>> tsTaskList = new ArrayList<>(playList.size());
+        final int playListSize = playList.size();
+        final List<Future<TsFile>> tsTaskList = new ArrayList<>(playListSize);
+        networkExceptionThreshold.set(playListSize * NETWORK_EXCEPTION_BASE);
+        final Semaphore semaphore = new Semaphore(playListSize);
         for (MediaPlay mediaPlay : playList) {
             // 提交执行ts下载任务
             tsTaskList.add(CommonData.EXECUTOR.submit(newTsTask(mediaPlay, semaphore)));
         }
         return tsTaskList;
+    }
 
+    public void reset() {
+        networkExceptionCount.reset();
+        networkExceptionThreshold.set(0L);
     }
 
     private Callable<TsFile> newTsTask(MediaPlay mediaPlay, Semaphore semaphore) {
         return () -> {
             log.debug("开始下载ts文件");
-            final HttpSupport httpSupport = headRequest(mediaPlay.uri(), semaphore);
-            final Path tsFilePath = download(tempDirPath.resolve(mediaPlay.sequence() + ".ts"), httpSupport, semaphore);
+            final DownloadHttpRequest downloadHttpRequest = headRequest(mediaPlay.uri(), semaphore);
+            final Path tsFilePath = download(tempDirPath.resolve(mediaPlay.sequence() + ".ts"),
+                    downloadHttpRequest, semaphore);
             log.debug("ts文件下载成功，tsFilePath = {}", tsFilePath);
             // 解密文件
             decryptContent(mediaPlay.key(), tsFilePath);
@@ -128,38 +151,22 @@ public class M3U8HttpClient implements AutoCloseable {
         }
     }
 
-    private HttpSupport headRequest(URI uri, Semaphore semaphore) throws InterruptedException, IOException {
-        Duration headTimeout = null;
-        while (true) {
+    private DownloadHttpRequest headRequest(URI uri, Semaphore semaphore) throws InterruptedException, IOException {
+        final HeadHttpRequest headHttpRequest = new HeadHttpRequest(sleepQueue, uri, timeout);
+        for (; ; ) {
+            // http2 并发流量控制问题
             semaphore.acquire();
-            if (headTimeout == null) {
-                headTimeout = timeout;
-            }
-            else {
-                // 多次重试增加响应时长
-                if (MAX_TIMEOUT.compareTo(headTimeout) > 0) {
-                    headTimeout = headTimeout.plus(timeout);
-                }
-            }
-            final HttpRequest httpRequest = HttpRequest.newBuilder(uri)
-                    .header("accept-encoding", ContentEncoding.CONTENT_ENCODING)
-                    .timeout(headTimeout)
-                    .HEAD().build();
             try {
-                final HttpResponse<Void> response = logSend(httpRequest, HttpResponse.BodyHandlers.discarding());
+                final HttpResponse<Void> response = logSend(headHttpRequest.newHttpRequest(), HttpResponse.BodyHandlers.discarding());
                 final HttpHeaders headers = response.headers();
                 final long contentLength = headers.firstValue("content-length").map(Long::parseLong).orElse(Long.MAX_VALUE);
-                final ContentEncoding contentEncoding = ContentEncoding.of(headers.firstValue("content-encoding").orElse(null));
                 final String acceptRanges = headers.firstValue("accept-ranges").orElse(null);
-                return new HttpSupport(uri,
-                        response.version(),
-                        timeout,
-                        contentLength,
-                        contentEncoding,
+                return new DownloadHttpRequest(sleepQueue, uri, timeout,
+                        response.version(), contentLength,
                         "bytes".equals(acceptRanges));
             }
             catch (IOException e) {
-                httpIOExceptionHandler(e, httpRequest, semaphore);
+                httpIOExceptionHandler(e, headHttpRequest, semaphore);
             }
             finally {
                 semaphore.release();
@@ -168,34 +175,36 @@ public class M3U8HttpClient implements AutoCloseable {
     }
 
 
-    private Path download(Path filePath, HttpSupport httpSupport, Semaphore semaphore) throws InterruptedException, IOException {
+    private Path download(Path filePath, DownloadHttpRequest downloadHttpRequest, Semaphore semaphore) throws InterruptedException, IOException {
         if (Files.notExists(filePath)) {
             log.debug("创建文件，filePath = {}", filePath);
             Files.createFile(filePath);
         }
-        while (true) {
-            if (httpSupport.getVersion() == HttpClient.Version.HTTP_2) {
+        for (; ; ) {
+            if (downloadHttpRequest.version() == HttpClient.Version.HTTP_2) {
                 semaphore.acquire();
             }
             // 是否已经下载完成
             final long fileSize = Files.size(filePath);
-            if (httpSupport.getContentLength() == fileSize) {
+            if (downloadHttpRequest.complete(fileSize)) {
                 return filePath;
             }
-            final HttpRequest httpRequest = httpSupport.newHttpRequest(fileSize);
+            final HttpRequest httpRequest = downloadHttpRequest.newHttpRequest(fileSize);
             try {
                 // 发送http请求
-                logSend(httpRequest,
-                        HttpResponse.BodyHandlers.ofFile(filePath, httpSupport.openOptions()));
+                final HttpResponse<Path> httpResponse = logSend(httpRequest,
+                        HttpResponse.BodyHandlers.ofFile(filePath, downloadHttpRequest.openOptions()));
+                final HttpHeaders headers = httpResponse.headers();
+                final ContentEncoding contentEncoding = ContentEncoding.of(headers.firstValue("content-encoding").orElse(null));
                 // 解压缩文件
-                unzipContent(httpSupport.getContentEncoding(), filePath);
+                unzipContent(contentEncoding, filePath);
                 return filePath;
             }
             catch (IOException e) {
-                httpIOExceptionHandler(e, httpRequest, semaphore);
+                httpIOExceptionHandler(e, downloadHttpRequest, semaphore);
             }
             finally {
-                if (httpSupport.getVersion() == HttpClient.Version.HTTP_2) {
+                if (downloadHttpRequest.version() == HttpClient.Version.HTTP_2) {
                     semaphore.release();
                 }
             }
@@ -260,45 +269,87 @@ public class M3U8HttpClient implements AutoCloseable {
         };
     }
 
+    private void networkException() throws ConnectException {
+        networkExceptionCount.increment();
+        // 超过指定阈值抛出网络异常
+        if (networkExceptionCount.sum() >= networkExceptionThreshold.get()) {
+            throw new ConnectException("网络连接异常，请检查网络连接或代理服务器");
+        }
+    }
 
-    private void httpIOExceptionHandler(IOException e, HttpRequest httpRequest, Semaphore semaphore) throws InterruptedException, IOException {
+    private void httpIOExceptionHandler(IOException e, HttpRequestExpand httpRequestExpand, Semaphore semaphore) throws IOException, InterruptedException {
         switch (e) {
             case HttpStatusCodeException _ -> log.trace("http 状态码异常", e);
-            case HttpTimeoutException _ -> log.trace("http超时", e);
-            case ConnectException _ -> log.trace("http连接异常", e);
-            case SSLHandshakeException _ -> log.trace("SSL握手异常", e);
+            case HttpConnectTimeoutException _ -> {
+                log.trace("http连接超时", e);
+                networkException();
+            }
+            case HttpTimeoutException _ -> {
+                log.trace("http超时", e);
+                // 增加http响应时长
+                httpRequestExpand.plusTimeout(timeout);
+            }
+            case HttpStatusCode4xxException httpStatusCode4xxException -> {
+                if (httpStatusCode4xxException.getHttpResponse().statusCode() == 403) {
+                    throw new HttpStatusCode4xxException("服务器拒绝请求，请尝试使用代理服务器",
+                            httpStatusCode4xxException.getHttpResponse(),
+                            httpStatusCode4xxException);
+                }
+                throw httpStatusCode4xxException;
+            }
+            case ConnectException _ -> {
+                log.trace("http连接异常", e);
+                networkException();
+            }
+            case SSLHandshakeException _ -> {
+                log.trace("SSL握手异常", e);
+                networkException();
+            }
             default -> {
                 final String message = Optional.ofNullable(e.getMessage()).orElse("");
                 // http2 并发流量控制问题的
                 if ("too many concurrent streams".equals(message)) {
                     log.trace("http2 并发流量控制", e);
-                    semaphore.acquire();
+                    if (httpRequestExpand instanceof DownloadHttpRequest downloadHttpRequest) {
+                        if (downloadHttpRequest.version() == HttpClient.Version.HTTP_2) {
+                            semaphore.acquire();
+                        }
+                    }
                 }
                 else if ("Connection reset".equals(message)) {
                     log.trace("连接重置", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
+                    networkException();
                 }
                 else if (message.endsWith(": GOAWAY received")) {
                     log.trace("收到 http2 GOAWAY 帧", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
-                // 可能是触发风控，或服务器异常
+                // 可能是服务器异常、网络异常
                 else if (message.startsWith("fixed content-length: ")) {
                     log.trace("http响应体内容缺失", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
+                }
+                else if (message.startsWith("BUFFER_UNDERFLOW with EOF,")) {
+                    log.trace(e.getMessage(), e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
                 // HTTP2存在的问题，似乎是一个bug
-                else if ("EOF reached while reading".equals(message) && (
-                        HttpClient.Version.HTTP_2 == httpRequest.version().orElse(null)
-                                // HEAD 请求默认通过
-                                || "HEAD".equals(httpRequest.method()))) {
+                else if ("EOF reached while reading".equals(message)) {
                     log.trace("http2 EOF异常", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
                 else if ("Received RST_STREAM: Stream not processed".equals(message)) {
                     log.trace("服务器未处理流", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
                 else if ("Received RST_STREAM: Internal error".equals(message)) {
                     log.trace("服务器内部错误", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
                 else if ("HTTP/1.1 header parser received no bytes".equals(message)) {
                     log.trace("HTTP/1.1 header 没有数据", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
                 else {
                     throw e;
@@ -335,6 +386,11 @@ public class M3U8HttpClient implements AutoCloseable {
         // 响应状态码处理
         final int statusCode = httpResponse.statusCode();
         if (statusCode == 200 || statusCode == 206) {
+            final Thread thread = sleepQueue.poll();
+            // 中断等待队列中的线程
+            if (thread != null) {
+                thread.interrupt();
+            }
             return httpResponse;
         }
         // 客户端异常，可能需要结束任务
@@ -344,7 +400,8 @@ public class M3U8HttpClient implements AutoCloseable {
                     %s
                     HttpResponse
                     %s
-                    """.formatted(httpRequestLog(httpRequest), httpResponseLog(httpResponse)));
+                    """.formatted(httpRequestLog(httpRequest), httpResponseLog(httpResponse)),
+                    httpResponse);
         }
         else {
             throw new HttpStatusCodeException("""

@@ -249,7 +249,7 @@ public class DownloadView extends BorderPane {
         }
 
         @Override
-        public void retryableFailure(Exception e) {
+        public void retryableFailure(Throwable e) {
             super.retryableFailure(e);
             ErrorAlert.show(DownloadView.super.getScene().getWindow(),
                     "下载任务执行异常", e);

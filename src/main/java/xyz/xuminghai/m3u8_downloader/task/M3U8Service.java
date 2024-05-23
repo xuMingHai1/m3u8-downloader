@@ -18,7 +18,7 @@ public class M3U8Service extends Service<Void> {
     private M3U8Task m3u8Task;
 
     private final BooleanProperty disablePause = new SimpleBooleanProperty();
-    private final ObjectProperty<Exception> retryableException = new SimpleObjectProperty<>();
+    private final ObjectProperty<Throwable> retryableException = new SimpleObjectProperty<>();
 
     public M3U8Service() {
         super.setExecutor(CommonData.EXECUTOR);
@@ -77,7 +77,7 @@ public class M3U8Service extends Service<Void> {
      *
      * @param e 失败异常
      */
-    protected void retryableFailure(Exception e) {
+    protected void retryableFailure(Throwable e) {
 
     }
 

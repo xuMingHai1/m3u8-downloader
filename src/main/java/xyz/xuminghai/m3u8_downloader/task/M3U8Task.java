@@ -40,6 +40,8 @@ import java.util.regex.Pattern;
 @Slf4j
 public class M3U8Task extends Task<Void> implements AutoCloseable {
 
+    private static final Pattern SIZE_PATTERN = Pattern.compile("^size=\\s*(\\d+kB)");
+
     private final M3U8 m3u8;
 
     private final M3U8HttpClient m3u8HttpClient;
@@ -50,10 +52,10 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
     private final AtomicBoolean pauseState = new AtomicBoolean();
     private final AtomicBoolean disablePause = new AtomicBoolean();
     private final AtomicReference<Thread> executorThread = new AtomicReference<>();
-    private final AtomicReference<Exception> retryableException = new AtomicReference<>();
+    private final AtomicReference<Throwable> retryableException = new AtomicReference<>();
 
     private final BooleanProperty disablePauseProperty = new SimpleBooleanProperty();
-    private final ObjectProperty<Exception> retryableExceptionProperty = new SimpleObjectProperty<>();
+    private final ObjectProperty<Throwable> retryableExceptionProperty = new SimpleObjectProperty<>();
 
 
     private final double totalWork = 1.0;
@@ -219,8 +221,8 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
             }
             catch (TsExecutionException e) {
                 super.updateMessage("ts文件下载异常");
-                // 可重试失败
-                retryableFailure(e);
+                // 可重试失败，获取包装的异常
+                retryableFailure(e.getCause());
                 // 暂停等待恢复
                 if (awaitResume()) {
                     log.info("重试ts文件下载");
@@ -292,7 +294,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
                             .setCause(e)
                             .log();
                     undoneTask.forEach(future -> future.cancel(true));
-                    throw new TsExecutionException(doneTask, e);
+                    throw new TsExecutionException(doneTask, e.getCause());
                 }
                 catch (TimeoutException _) {
                     // 等待超时，获取下一个任务
@@ -344,7 +346,6 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
         for (TsFile tsFile : tsFileList) {
             totalSize += Files.size(tsFile.path());
         }
-        final Pattern pattern = Pattern.compile("size=\\s*(\\d+kB)");
         final Path ffmpegOutput = m3u8.downloadTempDirPath().resolve("ffmpeg_output.log");
         // 将输出写入文件和解析
         try (final BufferedReader bufferedReader = process.errorReader(StandardCharsets.UTF_8);
@@ -354,7 +355,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
                 bufferedWriter.write(line);
                 bufferedWriter.newLine();
                 // 匹配当前size
-                final Matcher matcher = pattern.matcher(line);
+                final Matcher matcher = SIZE_PATTERN.matcher(line);
                 if (matcher.find()) {
                     // 粗略计算进度
                     final long fileSize = FileSizeUtils.parseString(matcher.group(1));
@@ -442,6 +443,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
     boolean resume() {
         if (isNotDisabledPause() &&
                 pauseState.compareAndSet(true, false)) {
+            m3u8HttpClient.reset();
             cyclicBarrier.reset();
             return true;
         }
@@ -475,11 +477,11 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
         Thread.interrupted();
     }
 
-    ReadOnlyObjectProperty<Exception> retryableExceptionProperty() {
+    ReadOnlyObjectProperty<Throwable> retryableExceptionProperty() {
         return retryableExceptionProperty;
     }
 
-    private void retryableFailure(Exception e) {
+    private void retryableFailure(Throwable e) {
         retryableException.set(e);
         Platform.runLater(() -> retryableExceptionProperty.set(e));
     }
