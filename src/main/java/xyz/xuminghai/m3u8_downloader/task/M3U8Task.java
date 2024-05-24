@@ -251,6 +251,8 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
                 DurationUtils.chineseString(Duration.ofMillis(System.currentTimeMillis() - startTime)));
         log.info(successMessage);
         super.updateMessage(successMessage);
+        // 释放资源
+        close();
         // 更新进度 100%
         super.updateProgress(totalWork, totalWork);
         return null;
@@ -370,12 +372,6 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
     }
 
     @Override
-    protected void succeeded() {
-        super.succeeded();
-        close();
-    }
-
-    @Override
     protected void cancelled() {
         super.cancelled();
         log.info("取消M3U8任务，{}", m3u8);
@@ -488,6 +484,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
 
     boolean retryable() {
         if (retryableException.get() != null) {
+            m3u8HttpClient.reset();
             cyclicBarrier.reset();
             return true;
         }

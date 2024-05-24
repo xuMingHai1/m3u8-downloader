@@ -442,5 +442,6 @@ public class M3U8HttpClient implements AutoCloseable {
     @Override
     public void close() {
         httpClient.shutdownNow();
+        sleepQueue.clear();
     }
 }
