@@ -83,7 +83,16 @@ public class DownloadView extends BorderPane {
     private final HBox buttonHBox = new HBox();
 
 
+    /**
+     * 下载消息
+     */
     private final Text downloadMessage = new Text();
+
+    /**
+     * 下载速度
+     */
+    private final Text downloadSpeed = new Text();
+
     /**
      * 进度条
      */
@@ -179,7 +188,10 @@ public class DownloadView extends BorderPane {
     private void initBottom() {
         progressBarStackPane.setId("progress-bar-stack-pane");
         downloadMessage.getStyleClass().add(Styles.TEXT_SMALL);
-        VBox.setMargin(downloadMessage, new Insets(1.0));
+        downloadSpeed.getStyleClass().add(Styles.TEXT_SMALL);
+        AnchorPane.setRightAnchor(downloadSpeed, 0.0);
+        final AnchorPane downloadInfoPane = new AnchorPane(downloadMessage, downloadSpeed);
+        VBox.setMargin(downloadInfoPane, new Insets(1.0));
         downloadProgressBar.getStyleClass().add(Styles.LARGE);
         downloadProgressBar.setPrefWidth(Double.MAX_VALUE);
         downloadPercentage.getStyleClass().add(Styles.TEXT_NORMAL);
@@ -198,7 +210,7 @@ public class DownloadView extends BorderPane {
             }
         });
 
-        super.setBottom(new VBox(downloadMessage, progressBarStackPane));
+        super.setBottom(new VBox(downloadInfoPane, progressBarStackPane));
     }
 
     private void initEvent() {
@@ -272,11 +284,12 @@ public class DownloadView extends BorderPane {
         public void start() {
             super.start();
             // 绑定属性
-            pauseButton.disableProperty().bind(super.disablePause());
+            pauseButton.disableProperty().bind(super.disablePauseProperty());
             downloadMessage.textProperty().bind(super.messageProperty());
+            downloadSpeed.textProperty().bind(super.downloadSpeedProperty());
             downloadProgressBar.progressProperty().bind(super.progressProperty());
-            // 设置暂停按钮
-            clearAndAddButton(pauseButton);
+            // 设置暂停，取消按钮
+            clearAndAddButton(pauseButton, cancelButton);
             // 禁用可变参数
             uriTextArea.setDisable(true);
             httpProxyHostname.setDisable(true);
@@ -297,6 +310,8 @@ public class DownloadView extends BorderPane {
             pauseButton.disableProperty().set(false);
             downloadMessage.textProperty().unbind();
             downloadMessage.setText("");
+            downloadSpeed.textProperty().unbind();
+            downloadSpeed.setText("");
             downloadProgressBar.progressProperty().unbind();
             downloadProgressBar.setProgress(0);
             // 恢复可变参数
@@ -420,7 +435,7 @@ public class DownloadView extends BorderPane {
         continueButton.setOnAction(_ -> {
             if (m3u8Service.resume()) {
                 // 暂停按钮
-                clearAndAddButton(pauseButton);
+                clearAndAddButton(pauseButton, cancelButton);
             }
         });
 
@@ -437,8 +452,8 @@ public class DownloadView extends BorderPane {
 
         // 重试按钮操作
         retryButton.setOnAction(_ -> {
-            if (m3u8Service.retryable()) {
-                clearAndAddButton(pauseButton);
+            if (m3u8Service.retry()) {
+                clearAndAddButton(pauseButton, cancelButton);
             }
         });
     }

@@ -6,11 +6,14 @@ import javafx.concurrent.Task;
 import lombok.extern.slf4j.Slf4j;
 import org.bytedeco.ffmpeg.ffmpeg;
 import org.bytedeco.javacpp.Loader;
+import xyz.xuminghai.m3u8_downloader.config.CommonData;
 import xyz.xuminghai.m3u8_downloader.http.M3U8HttpClient;
 import xyz.xuminghai.m3u8_downloader.m3u8.M3U8Key;
 import xyz.xuminghai.m3u8_downloader.m3u8.M3U8Parse;
 import xyz.xuminghai.m3u8_downloader.m3u8.MediaPlay;
 import xyz.xuminghai.m3u8_downloader.m3u8.TsFile;
+import xyz.xuminghai.m3u8_downloader.util.BitstreamUtils;
+import xyz.xuminghai.m3u8_downloader.util.DirectoryUtils;
 import xyz.xuminghai.m3u8_downloader.util.DurationUtils;
 import xyz.xuminghai.m3u8_downloader.util.FileSizeUtils;
 
@@ -18,11 +21,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class M3U8Task extends Task<Void> implements AutoCloseable {
 
-    private static final Pattern SIZE_PATTERN = Pattern.compile("^size=\\s*(\\d+kB)");
+    private static final Pattern SIZE_PATTERN = Pattern.compile("^size=\\s*(\\d+kB) ");
 
     private final M3U8 m3u8;
 
@@ -57,6 +57,8 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
     private final BooleanProperty disablePauseProperty = new SimpleBooleanProperty();
     private final ObjectProperty<Throwable> retryableExceptionProperty = new SimpleObjectProperty<>();
 
+    private final AtomicReference<Thread> downloadSpeedStatistics = new AtomicReference<>();
+    private final StringProperty downloadSpeedProperty = new SimpleStringProperty();
 
     private final double totalWork = 1.0;
     private double workDone = 0.0;
@@ -76,6 +78,8 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
         executorThread.set(Thread.currentThread());
         Files.createDirectory(m3u8.downloadTempDirPath());
         log.info("下载临时目录创建成功，downloadTempPath = {}", m3u8.downloadTempDirPath());
+        // 下载速度统计
+        downloadSpeedStatistics();
         // 更新进度 2%
         super.updateProgress(workDone = 0.02, totalWork);
 
@@ -244,15 +248,19 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
         super.updateMessage("正在合并ts文件");
         // 禁用暂停
         disabledPause();
+        // 关闭下载速率统计
+        pauseDownloadSpeedStatistics();
+        // 执行ffmpeg合并任务
         ffmpegTask(tsFileList);
 
+        // 释放资源
+        close();
         final String successMessage = "%s下载成功，视频大小：%s，耗时：%s".formatted(m3u8.filePath().getFileName(),
                 FileSizeUtils.convertString(Files.size(m3u8.filePath())),
                 DurationUtils.chineseString(Duration.ofMillis(System.currentTimeMillis() - startTime)));
         log.info(successMessage);
         super.updateMessage(successMessage);
-        // 释放资源
-        close();
+
         // 更新进度 100%
         super.updateProgress(totalWork, totalWork);
         return null;
@@ -365,6 +373,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
                     super.updateProgress(workDone += work, totalWork);
                     totalSize += fileSize;
                     progress -= work;
+                    super.updateMessage(line);
                 }
             }
         }
@@ -381,39 +390,13 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
     @Override
     public void close() {
         m3u8HttpClient.close();
+        log.debug("删除临时目录文件");
         try {
-            deleteDirectory();
+            DirectoryUtils.deleteDirectory(m3u8.downloadTempDirPath());
         }
         catch (IOException _) {
             // 删除失败时忽略
         }
-    }
-
-    private void deleteDirectory() throws IOException {
-        log.debug("删除临时目录文件");
-        Files.walkFileTree(m3u8.downloadTempDirPath(), new FileVisitor<>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Files.delete(file);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                throw exc;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                Files.delete(dir);
-                return FileVisitResult.CONTINUE;
-            }
-        });
     }
 
     private boolean isNotPauseState() {
@@ -429,6 +412,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
         if (isNotDisabledPause() &&
                 pauseState.compareAndSet(false, true)) {
             executorThread.get().interrupt();
+            pauseDownloadSpeedStatistics();
             return true;
         }
         return false;
@@ -479,15 +463,78 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
 
     private void retryableFailure(Throwable e) {
         retryableException.set(e);
+        pauseDownloadSpeedStatistics();
         Platform.runLater(() -> retryableExceptionProperty.set(e));
     }
 
-    boolean retryable() {
-        if (retryableException.get() != null) {
+    boolean retry() {
+        if (retryableException.getAndSet(null) != null) {
             m3u8HttpClient.reset();
             cyclicBarrier.reset();
             return true;
         }
         return false;
+    }
+
+    private void updateDownloadSpeed(String downloadSpeed) {
+        Platform.runLater(() -> downloadSpeedProperty.set(downloadSpeed));
+    }
+
+    ReadOnlyStringProperty downloadSpeedProperty() {
+        return downloadSpeedProperty;
+    }
+
+    private void pauseDownloadSpeedStatistics() {
+        downloadSpeedStatistics.get().interrupt();
+    }
+
+    private void downloadSpeedStatisticsClose() {
+        log.debug("下载速度统计关闭");
+        Platform.runLater(() -> updateDownloadSpeed(""));
+    }
+
+    private void downloadSpeedStatistics() {
+        CommonData.EXECUTOR.execute(new Runnable() {
+
+            private long lastDirectorySize;
+
+            @Override
+            public void run() {
+                log.debug("开始下载速度统计");
+                downloadSpeedStatistics.set(Thread.currentThread());
+                for (; ; ) {
+                    try {
+                        //noinspection BusyWait
+                        Thread.sleep(1000L);
+                    }
+                    catch (InterruptedException e) {
+                        // 禁用暂停，不是暂停状态和异常状态
+                        if (disablePause.get() || (isNotPauseState() && retryableException.get() == null)) {
+                            downloadSpeedStatisticsClose();
+                            return;
+                        }
+                        log.debug("暂停下载速度统计");
+                        // 暂停等待恢复
+                        if (awaitResume()) {
+                            log.debug("恢复下载速度统计");
+                            continue;
+                        }
+                        downloadSpeedStatisticsClose();
+                        return;
+                    }
+
+                    try {
+                        final long directorySize = DirectoryUtils.directorySize(m3u8.downloadTempDirPath());
+                        final String downloadSpeed = BitstreamUtils.fileSizeConvertBitstreamString(directorySize - lastDirectorySize);
+                        lastDirectorySize = directorySize;
+                        log.debug("下载速率 = {}/s", downloadSpeed);
+                        updateDownloadSpeed(downloadSpeed.concat("/s"));
+                    }
+                    catch (IOException _) {
+                    }
+
+                }
+            }
+        });
     }
 }

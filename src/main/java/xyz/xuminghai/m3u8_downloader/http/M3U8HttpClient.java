@@ -102,7 +102,7 @@ public class M3U8HttpClient implements AutoCloseable {
         log.info("创建ts文件列表下载任务");
         final int playListSize = playList.size();
         final List<Future<TsFile>> tsTaskList = new ArrayList<>(playListSize);
-        networkExceptionThreshold.set(playListSize * NETWORK_EXCEPTION_BASE);
+        networkExceptionThreshold.set(playListSize);
         final Semaphore semaphore = new Semaphore(playListSize);
         for (MediaPlay mediaPlay : playList) {
             // 提交执行ts下载任务

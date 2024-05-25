@@ -19,6 +19,7 @@ public class M3U8Service extends Service<Void> {
 
     private final BooleanProperty disablePause = new SimpleBooleanProperty();
     private final ObjectProperty<Throwable> retryableException = new SimpleObjectProperty<>();
+    private final StringProperty downloadSpeed = new SimpleStringProperty();
 
     public M3U8Service() {
         super.setExecutor(CommonData.EXECUTOR);
@@ -34,6 +35,7 @@ public class M3U8Service extends Service<Void> {
         m3u8Task = new M3U8Task(m3u8);
         disablePause.bind(m3u8Task.disablePauseProperty());
         retryableException.bind(m3u8Task.retryableExceptionProperty());
+        downloadSpeed.bind(m3u8Task.downloadSpeedProperty());
         return m3u8Task;
     }
 
@@ -52,9 +54,11 @@ public class M3U8Service extends Service<Void> {
         disablePause.set(false);
         retryableException.unbind();
         retryableException.set(null);
+        downloadSpeed.unbind();
+        downloadSpeed.set("");
     }
 
-    public ReadOnlyBooleanProperty disablePause() {
+    public ReadOnlyBooleanProperty disablePauseProperty() {
         return disablePause;
     }
 
@@ -83,9 +87,12 @@ public class M3U8Service extends Service<Void> {
 
     }
 
-    public boolean retryable() {
-        return m3u8Task.retryable();
+    public boolean retry() {
+        return m3u8Task.retry();
     }
 
+    public ReadOnlyStringProperty downloadSpeedProperty() {
+        return downloadSpeed;
+    }
 
 }
