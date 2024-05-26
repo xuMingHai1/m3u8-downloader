@@ -39,37 +39,15 @@ public final class DirectoryUtils {
 
             @Override
             public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                Files.delete(dir);
-                return FileVisitResult.CONTINUE;
+                if (exc == null) {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                }
+                else {
+                    throw exc;
+                }
             }
         });
     }
-
-    public static long directorySize(Path path) throws IOException {
-        Objects.requireNonNull(path);
-        final long[] size = {0};
-        Files.walkFileTree(path, new FileVisitor<>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                size[0] += Files.size(file);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                throw exc;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                return FileVisitResult.CONTINUE;
-            }
-        });
-        return size[0];
-    }
+    
 }

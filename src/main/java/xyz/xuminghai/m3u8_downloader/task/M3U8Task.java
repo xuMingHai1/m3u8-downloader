@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
  * @author xuMingHai
  */
 @Slf4j
-public class M3U8Task extends Task<Void> implements AutoCloseable {
+public class M3U8Task extends Task<Void> {
 
     private static final Pattern SIZE_PATTERN = Pattern.compile("^size=\\s*(\\d+kB) ");
 
@@ -253,8 +253,6 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
         // 执行ffmpeg合并任务
         ffmpegTask(tsFileList);
 
-        // 释放资源
-        close();
         final String successMessage = "%s下载成功，视频大小：%s，耗时：%s".formatted(m3u8.filePath().getFileName(),
                 FileSizeUtils.convertString(Files.size(m3u8.filePath())),
                 DurationUtils.chineseString(Duration.ofMillis(System.currentTimeMillis() - startTime)));
@@ -373,7 +371,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
                     super.updateProgress(workDone += work, totalWork);
                     totalSize += fileSize;
                     progress -= work;
-                    super.updateMessage(line);
+                    super.updateMessage("合并ts文件任务：".concat(line));
                 }
             }
         }
@@ -384,19 +382,22 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
     protected void cancelled() {
         super.cancelled();
         log.info("取消M3U8任务，{}", m3u8);
-        close();
     }
 
     @Override
-    public void close() {
+    protected void done() {
+        super.done();
+        // 完成时删除临时目录文件
+        if (isDone()) {
+            log.debug("删除临时目录文件");
+            try {
+                DirectoryUtils.deleteDirectory(m3u8.downloadTempDirPath());
+            }
+            catch (IOException _) {
+                // 删除失败时忽略
+            }
+        }
         m3u8HttpClient.close();
-        log.debug("删除临时目录文件");
-        try {
-            DirectoryUtils.deleteDirectory(m3u8.downloadTempDirPath());
-        }
-        catch (IOException _) {
-            // 删除失败时忽略
-        }
     }
 
     private boolean isNotPauseState() {
@@ -495,7 +496,6 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
 
     private void downloadSpeedStatistics() {
         CommonData.EXECUTOR.execute(new Runnable() {
-
             private long lastDirectorySize;
 
             @Override
@@ -516,6 +516,7 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
                         log.debug("暂停下载速度统计");
                         // 暂停等待恢复
                         if (awaitResume()) {
+                            lastDirectorySize = 0L;
                             log.debug("恢复下载速度统计");
                             continue;
                         }
@@ -523,16 +524,11 @@ public class M3U8Task extends Task<Void> implements AutoCloseable {
                         return;
                     }
 
-                    try {
-                        final long directorySize = DirectoryUtils.directorySize(m3u8.downloadTempDirPath());
-                        final String downloadSpeed = BitstreamUtils.fileSizeConvertBitstreamString(directorySize - lastDirectorySize);
-                        lastDirectorySize = directorySize;
-                        log.debug("下载速率 = {}/s", downloadSpeed);
-                        updateDownloadSpeed(downloadSpeed.concat("/s"));
-                    }
-                    catch (IOException _) {
-                    }
-
+                    final long currentDownloadByte = m3u8HttpClient.currentDownloadByte();
+                    final String downloadSpeed = BitstreamUtils.fileSizeConvertBitstreamString(currentDownloadByte - lastDirectorySize);
+                    lastDirectorySize = currentDownloadByte;
+                    log.debug("下载速率 = {}/s", downloadSpeed);
+                    updateDownloadSpeed(downloadSpeed.concat("/s"));
                 }
             }
         });

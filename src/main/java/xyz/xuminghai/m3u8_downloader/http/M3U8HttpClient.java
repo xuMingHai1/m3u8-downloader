@@ -60,6 +60,7 @@ public class M3U8HttpClient implements AutoCloseable {
     private final LongAdder networkExceptionCount = new LongAdder();
     private static final long NETWORK_EXCEPTION_BASE = 20L;
     private final AtomicLong networkExceptionThreshold = new AtomicLong();
+    private final LongAdder downloadByteCount = new LongAdder();
 
     private final Duration timeout;
     private final Path tempDirPath;
@@ -111,9 +112,14 @@ public class M3U8HttpClient implements AutoCloseable {
         return tsTaskList;
     }
 
+    public long currentDownloadByte() {
+        return downloadByteCount.sum();
+    }
+
     public void reset() {
         networkExceptionCount.reset();
         networkExceptionThreshold.set(0L);
+        downloadByteCount.reset();
     }
 
     private Callable<TsFile> newTsTask(MediaPlay mediaPlay, Semaphore semaphore) {
@@ -138,7 +144,7 @@ public class M3U8HttpClient implements AutoCloseable {
             // 初始化解密
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(m3u8Key.getKey(), "AES"),
                     new IvParameterSpec(m3u8Key.getIv()));
-            final Path decryptFilePath = tsFilePath.getParent().resolve("decrypt-" + tsFilePath.getFileName());
+            final Path decryptFilePath = tsFilePath.getParent().resolve(tsFilePath.getFileName().toString().concat(".decrypt"));
             // 解密为新文件
             try (CipherInputStream inputStream = new CipherInputStream(Files.newInputStream(tsFilePath), cipher)) {
                 Files.copy(inputStream, decryptFilePath);
@@ -193,7 +199,8 @@ public class M3U8HttpClient implements AutoCloseable {
             try {
                 // 发送http请求
                 final HttpResponse<Path> httpResponse = logSend(httpRequest,
-                        HttpResponse.BodyHandlers.ofFile(filePath, downloadHttpRequest.openOptions()));
+                        _ -> new DownloadPathSubscriber(filePath, downloadHttpRequest.openOptions(), downloadByteCount)
+                );
                 final HttpHeaders headers = httpResponse.headers();
                 final ContentEncoding contentEncoding = ContentEncoding.of(headers.firstValue("content-encoding").orElse(null));
                 // 解压缩文件
@@ -236,7 +243,8 @@ public class M3U8HttpClient implements AutoCloseable {
                         }
                         return 0L;
                     }).log();
-            final Path unzipFilePath = tsFilePath.getParent().resolve("unzip-" + contentEncoding + "-" + tsFilePath.getFileName());
+            final Path unzipFilePath = tsFilePath.getParent().resolve(contentEncoding + "-" + tsFilePath.getFileName()
+                    .toString().concat(".unzip"));
             // 解压为新的文件
             try (InputStream inputStream = unzipInputStream(contentEncoding, Files.newInputStream(tsFilePath))) {
                 Files.copy(inputStream, unzipFilePath);

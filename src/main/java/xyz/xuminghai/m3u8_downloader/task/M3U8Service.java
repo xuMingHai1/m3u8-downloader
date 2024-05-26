@@ -48,7 +48,6 @@ public class M3U8Service extends Service<Void> {
     public void reset() {
         super.reset();
         m3u8 = null;
-        m3u8Task.close();
         m3u8Task = null;
         disablePause.unbind();
         disablePause.set(false);
