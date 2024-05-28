@@ -1,0 +1,8 @@
+#qr-code-h-box {
+    -fx-alignment: center;
+    -fx-spacing: 30;
+}
+
+#qr-code-h-box > .card {
+    -fx-max-height: 300;
+}

@@ -78,6 +78,15 @@ public class MainView extends BorderPane {
         return aboutView;
     }
 
+    private DonateView donateView;
+
+    private DonateView getDonateView() {
+        if (donateView == null) {
+            donateView = new DonateView();
+        }
+        return donateView;
+    }
+
     private VBox toggleButtonVBox() {
         // 切换按钮
         final ToggleGroup toggleGroup = new ToggleGroup();
@@ -97,8 +106,14 @@ public class MainView extends BorderPane {
         aboutToggle.setToggleGroup(toggleGroup);
         aboutToggle.setOnAction(_ -> super.setCenter(getAboutView()));
 
+        // 捐助页面
+        final ToggleButton donateToggle = new ToggleButton("支持一下");
+        donateToggle.setToggleGroup(toggleGroup);
+        donateToggle.setOnAction(_ -> super.setCenter(getDonateView()));
+
+        // 默认页面
         m3u8DownloadToggle.fire();
-        return new VBox(m3u8DownloadToggle, aboutToggle);
+        return new VBox(m3u8DownloadToggle, aboutToggle, donateToggle);
     }
 
 

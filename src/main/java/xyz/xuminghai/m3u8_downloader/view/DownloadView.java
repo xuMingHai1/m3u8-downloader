@@ -376,7 +376,7 @@ public class DownloadView extends BorderPane {
                     return;
                 }
             }
-            catch (IllegalArgumentException e) {
+            catch (IllegalArgumentException _) {
                 uriTextAreaAlert("请输入正确的m3u8地址");
                 return;
             }
@@ -400,7 +400,7 @@ public class DownloadView extends BorderPane {
                 filePath = downloadDirPath.resolve(fileNameString + ".mp4");
             }
             // 包含无效字符
-            catch (InvalidPathException e) {
+            catch (InvalidPathException _) {
                 fileNameAlert("文件名包含无效字符");
                 return;
             }

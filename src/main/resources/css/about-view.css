@@ -1,6 +1,15 @@
+#about-view {
+    -fx-padding: 100;
+}
+
+#top-title-h-box {
+    -fx-spacing: 60;
+    -fx-alignment: center;
+}
+
 #about-grid-pane {
     -fx-alignment: center;
-    -fx-hgap: 20;
+    -fx-hgap: 30;
     -fx-vgap: 10;
 }
 
@@ -15,10 +24,4 @@
 
 #home-link:hover {
     -fx-text-fill: -color-success-3;
-}
-
-
-#qr-code-h-box {
-    -fx-alignment: center;
-    -fx-spacing: 30;
 }
