@@ -981,6 +981,10 @@ public class M3U8HttpClient implements AutoCloseable {
                     log.trace("服务器内部错误", e);
                     httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
+                else if ("Received RST_STREAM: Protocol error".equals(message)) {
+                    log.trace("协议错误", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
+                }
                 else if ("HTTP/1.1 header parser received no bytes".equals(message)) {
                     log.trace("HTTP/1.1 header 没有数据", e);
                     httpRequestExpand.plusSleep(SLEEP_TIME);
