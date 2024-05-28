@@ -674,17 +674,12 @@ public interface CommonData {
     /**
      * 项目主页地址
      */
-    String HOME_URI = "https://github.com/xuMingHai1";
+    String HOME_URI = "https://github.com/xuMingHai1/m3u8-downloader";
 
     /**
      * 发布地址
      */
     String RELEASE_URI = HOME_URI + "/releases";
-
-    /**
-     * 备份发布地址
-     */
-    String BACKUP_RELEASE_URI = "";
 
     /**
      * 帮助地址
