@@ -24,9 +24,9 @@
 
 #### 项目开源地址
 
-[GitHub](https://github.com/xuMingHai1/m3u8-downloader)
+- [GitHub](https://github.com/xuMingHai1/m3u8-downloader)
 
-[Gitee](https://gitee.com/xuMingHai1/m3u8-downloader)
+- [Gitee](https://gitee.com/xuMingHai1/m3u8-downloader)
 
 #### QQ交流群
 
