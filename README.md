@@ -5,8 +5,6 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/xuMingHai1/m3u8-downloader/total)
 ![GitHub License](https://img.shields.io/github/license/xuMingHai1/m3u8-downloader)
 
-[软件发布地址](../../releases)
-
 #### 软件特点
 
 - 使用虚拟线程并发下载
@@ -19,6 +17,16 @@
 #### 软件截图
 
 ![img.png](md_data/app.png)
+
+#### 下载软件
+
+[软件发布地址](../../releases)
+
+#### 项目开源地址
+
+[GitHub](https://github.com/xuMingHai1/m3u8-downloader)
+
+[Gitee](https://gitee.com/xuMingHai1/m3u8-downloader)
 
 #### QQ交流群
 
