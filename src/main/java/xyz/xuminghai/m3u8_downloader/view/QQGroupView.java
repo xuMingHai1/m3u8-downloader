@@ -626,135 +626,58 @@
 
 package xyz.xuminghai.m3u8_downloader.view;
 
-import javafx.geometry.Insets;
+import atlantafx.base.controls.Card;
+import atlantafx.base.theme.Styles;
+import atlantafx.base.util.Animations;
+import javafx.animation.Timeline;
 import javafx.geometry.Pos;
-import javafx.scene.control.Hyperlink;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleGroup;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
-import xyz.xuminghai.m3u8_downloader.App;
+import javafx.util.Duration;
 import xyz.xuminghai.m3u8_downloader.config.CommonData;
 
-
 /**
- * 2024/4/21 上午12:57 星期日<br/>
+ * 2024/5/31 下午4:31 星期五<br/>
  *
  * @author xuMingHai
  */
-public class MainView extends BorderPane {
+public class QQGroupView extends BorderPane {
 
-    public MainView() {
-        super.setId("main-view");
-        super.getStylesheets().add("/css/main-view.css");
-        leftView();
-    }
-
-    private void leftView() {
-        // APP 标题
-        final ImageView appIcon = new ImageView(CommonData.APP_ICON);
-        appIcon.setFitWidth(32);
-        appIcon.setFitHeight(32);
-        final Text appTitle = new Text(CommonData.APP_TITLE);
-        final HBox appTitleHBox = new HBox(appIcon, appTitle);
-        appTitleHBox.setId("app-title-h-box");
-        BorderPane.setMargin(appTitleHBox, new Insets(10, 10, 5, 5));
-
-        // 切换按钮
-        final VBox toggleButtonVBox = toggleButtonVBox();
-        toggleButtonVBox.setId("toggle-button-v-box");
-        BorderPane.setMargin(toggleButtonVBox, new Insets(20, 0, 0, 0));
-
-        // 版本
-        final Hyperlink versionLink = new Hyperlink(CommonData.VERSION);
-        versionLink.setId("version-link");
-        versionLink.setOnAction(_ -> App.hostServices.showDocument(CommonData.RELEASE_URI));
-        BorderPane.setAlignment(versionLink, Pos.CENTER);
-        BorderPane.setMargin(versionLink,
-                new Insets(0, 0, 5, 0));
-
-        // 左视图
-        final BorderPane leftView = new BorderPane();
-        leftView.setId("left-view");
-        leftView.setTop(appTitleHBox);
-        leftView.setCenter(toggleButtonVBox);
-        leftView.setBottom(versionLink);
-        super.setLeft(leftView);
-    }
+    private final Card qqGroupCard = new Card();
+    private final Timeline timeline = Animations.zoomIn(qqGroupCard, Duration.millis(500.0));
 
 
-    private DownloadView downloadView;
-
-    private DownloadView getDownloadView() {
-        if (downloadView == null) {
-            downloadView = new DownloadView();
-        }
-        return downloadView;
-    }
-
-    private AboutView aboutView;
-
-    private AboutView getAboutView() {
-        if (aboutView == null) {
-            aboutView = new AboutView();
-        }
-        return aboutView;
-    }
-
-    private DonateView donateView;
-
-    private DonateView getDonateView() {
-        if (donateView == null) {
-            donateView = new DonateView();
-        }
-        return donateView;
-    }
-
-    private QQGroupView qqGroupView;
-
-    private QQGroupView getQQGroupView() {
-        if (qqGroupView == null) {
-            qqGroupView = new QQGroupView();
-        }
-        return qqGroupView;
-    }
-
-    private VBox toggleButtonVBox() {
-        // 切换按钮
-        final ToggleGroup toggleGroup = new ToggleGroup();
-        toggleGroup.selectedToggleProperty().addListener((_, oldValue, newValue) -> {
-            if (newValue == null) {
-                oldValue.setSelected(true);
+    public QQGroupView() {
+        qqGroupCardHeader();
+        qqGroupCard.setBody(new ImageView(new Image("/img/qq_group_qrcode.png", true)));
+        qqGroupCard.setMaxSize(300, 370.0);
+        setCenter(qqGroupCard);
+        super.sceneProperty().addListener((_, _, newValue) -> {
+            if (newValue != null) {
+                timeline.play();
             }
         });
-
-        // m3u8 下载页面
-        final ToggleButton m3u8DownloadToggle = new ToggleButton("M3U8下载");
-        m3u8DownloadToggle.setToggleGroup(toggleGroup);
-        m3u8DownloadToggle.setOnAction(_ -> super.setCenter(getDownloadView()));
-
-        // 关于页面
-        final ToggleButton aboutToggle = new ToggleButton("关于");
-        aboutToggle.setToggleGroup(toggleGroup);
-        aboutToggle.setOnAction(_ -> super.setCenter(getAboutView()));
-
-        // QQ群
-        final ToggleButton qqGroupToggle = new ToggleButton("QQ群");
-        qqGroupToggle.setToggleGroup(toggleGroup);
-        qqGroupToggle.setOnAction(_ -> super.setCenter(getQQGroupView()));
-
-        // 捐助页面
-        final ToggleButton donateToggle = new ToggleButton("支持一下");
-        donateToggle.setToggleGroup(toggleGroup);
-        donateToggle.setOnAction(_ -> super.setCenter(getDonateView()));
-
-        // 默认页面
-        m3u8DownloadToggle.fire();
-        return new VBox(m3u8DownloadToggle, aboutToggle, qqGroupToggle, donateToggle);
     }
 
+    private void qqGroupCardHeader() {
+        final Circle qqGroupAvatar = new Circle(32.0, new ImagePattern(CommonData.APP_ICON));
+        qqGroupAvatar.setStroke(Color.LIGHTGREY);
+        final Text qqGroupName = new Text("M3U8下载器交流群");
+        qqGroupName.getStyleClass().add(Styles.TITLE_3);
+        final Text qqGroupNumber = new Text("群号：910349978");
+        qqGroupNumber.getStyleClass().add(Styles.TEXT_SUBTLE);
+        final HBox headerHBox = new HBox(30.0, qqGroupAvatar,
+                new VBox(10.0, qqGroupName, qqGroupNumber));
+        headerHBox.setAlignment(Pos.CENTER);
+
+        qqGroupCard.setHeader(headerHBox);
+    }
 
 }
