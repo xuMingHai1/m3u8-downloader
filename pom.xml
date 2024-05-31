@@ -632,7 +632,7 @@
 
     <groupId>xyz.xuminghai</groupId>
     <artifactId>m3u8-downloader</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <name>m3u8-downloader</name>
     <packaging>jlink</packaging>
 
@@ -739,6 +739,7 @@
     </dependencies>
 
     <profiles>
+        <!-- linux-x86_64 -->
         <profile>
             <id>linux-x86_64</id>
             <activation>
@@ -753,6 +754,7 @@
             </properties>
         </profile>
 
+        <!-- linux-arm64 -->
         <profile>
             <id>linux-arm64</id>
             <activation>
@@ -767,6 +769,7 @@
             </properties>
         </profile>
 
+        <!-- windows-x86_64 -->
         <profile>
             <id>windows-x86_64</id>
             <activation>
@@ -781,6 +784,7 @@
             </properties>
         </profile>
 
+        <!-- macosx-x86_64 -->
         <profile>
             <id>macosx-x86_64</id>
             <activation>
@@ -795,6 +799,7 @@
             </properties>
         </profile>
 
+        <!-- macosx-arm64 -->
         <profile>
             <id>macosx-arm64</id>
             <activation>
@@ -812,6 +817,7 @@
 
     <build>
         <plugins>
+            <!-- maven-compiler-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -826,6 +832,8 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- maven-jlink-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jlink-plugin</artifactId>

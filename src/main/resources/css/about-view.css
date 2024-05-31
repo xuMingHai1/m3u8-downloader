@@ -625,18 +625,19 @@
  */
 
 #about-view {
-    -fx-padding: 100;
+    -fx-alignment: center;
 }
 
-#top-title-h-box {
-    -fx-spacing: 60;
-    -fx-alignment: center;
+#header-h-box {
+    -fx-padding: 0 0 0 140;
+    -fx-spacing: 45;
+    -fx-alignment: center-left;
 }
 
 #about-grid-pane {
     -fx-alignment: center;
-    -fx-hgap: 30;
-    -fx-vgap: 10;
+    -fx-hgap: 35;
+    -fx-vgap: 20;
 }
 
 #copyright-h-box {

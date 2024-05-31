@@ -668,8 +668,12 @@ public interface CommonData {
     /**
      * 应用版本
      */
-    String VERSION = "v0.0.1";
+    String VERSION = "v0.0.2";
 
+    /**
+     * 发布日期
+     */
+    String RELEASE_DATE = "2024-06-01";
 
     /**
      * 项目主页地址
@@ -679,11 +683,11 @@ public interface CommonData {
     /**
      * 发布地址
      */
-    String RELEASE_URI = HOME_URI + "/releases";
+    String RELEASE_URI = HOME_URI.concat("/releases");
 
     /**
      * 帮助地址
      */
-    String HELP_URI = HOME_URI + "/issues";
+    String HELP_URI = HOME_URI.concat("/issues");
 
 }
