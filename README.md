@@ -19,3 +19,7 @@
 #### 软件截图
 
 ![img.png](md_data/app.png)
+
+#### QQ交流群
+
+![qq_group.png](md_data/qq_group.png)
