@@ -2,6 +2,8 @@
 
 使用Java开发的一款m3u8视频下载器，软件的目标是提供快速、完整、尽可能的将视频下载下来。
 
+> 如果觉得项目不错的话，请star这个项目，方便收到项目的更新消息。
+
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/xuMingHai1/m3u8-downloader/total)
 ![GitHub License](https://img.shields.io/github/license/xuMingHai1/m3u8-downloader)
 
