@@ -632,14 +632,16 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import xyz.xuminghai.m3u8_downloader.config.CommonData;
 
+import java.nio.file.Path;
+
 /**
  * 2024/5/5 上午4:49 星期日<br/>
  *
  * @author xuMingHai
  */
-public class M3U8Service extends Service<Void> {
+public class M3U8Service extends Service<Path> {
 
-    protected M3U8 m3u8;
+    private M3U8 m3u8;
 
     private M3U8Task m3u8Task;
 
@@ -657,7 +659,7 @@ public class M3U8Service extends Service<Void> {
     }
 
     @Override
-    protected Task<Void> createTask() {
+    protected Task<Path> createTask() {
         m3u8Task = new M3U8Task(m3u8);
         disablePause.bind(m3u8Task.disablePauseProperty());
         retryableException.bind(m3u8Task.retryableExceptionProperty());
@@ -695,10 +697,13 @@ public class M3U8Service extends Service<Void> {
         return false;
     }
 
-    public boolean resume() {
+    public boolean resume(M3U8 m3u8) {
         if (Platform.isFxApplicationThread()
                 && getState() == State.RUNNING) {
-            return m3u8Task.resume();
+            if (m3u8Task.resume(m3u8)) {
+                this.m3u8 = m3u8;
+                return true;
+            }
         }
         return false;
     }
@@ -712,8 +717,15 @@ public class M3U8Service extends Service<Void> {
 
     }
 
-    public boolean retry() {
-        return m3u8Task.retry();
+    public boolean retry(M3U8 m3u8) {
+        if (Platform.isFxApplicationThread()
+                && getState() == State.RUNNING) {
+            if (m3u8Task.retry(m3u8)) {
+                this.m3u8 = m3u8;
+                return true;
+            }
+        }
+        return false;
     }
 
     public ReadOnlyStringProperty downloadSpeedProperty() {

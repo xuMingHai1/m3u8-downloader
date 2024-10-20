@@ -626,7 +626,6 @@
 
 package xyz.xuminghai.m3u8_downloader.task;
 
-import lombok.Getter;
 import xyz.xuminghai.m3u8_downloader.m3u8.TsFile;
 
 import java.util.List;
@@ -638,8 +637,7 @@ import java.util.concurrent.ExecutionException;
  *
  * @author xuMingHai
  */
-@Getter
-public class TsExecutionException extends ExecutionException {
+public class TsExecutionException extends ExecutionException implements TsTaskException {
 
     private final List<TsFile> doneTask;
 
@@ -648,4 +646,8 @@ public class TsExecutionException extends ExecutionException {
         this.doneTask = doneTask;
     }
 
+    @Override
+    public List<TsFile> getDoneTask() {
+        return doneTask;
+    }
 }

@@ -646,9 +646,7 @@ import xyz.xuminghai.m3u8_downloader.task.M3U8;
 import xyz.xuminghai.m3u8_downloader.task.M3U8Service;
 
 import java.io.File;
-import java.net.InetSocketAddress;
-import java.net.ProxySelector;
-import java.net.URI;
+import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -738,13 +736,9 @@ public class DownloadView extends BorderPane {
                 super.requestFocus();
             }
         });
-        initView();
-        initEvent();
-    }
-
-    private void initView() {
         initCenter();
         initBottom();
+        initEvent();
     }
 
     private void initCenter() {
@@ -874,7 +868,7 @@ public class DownloadView extends BorderPane {
             // 修改进度条颜色
             progressBarStackPane.pseudoClassStateChanged(Styles.STATE_SUCCESS, true);
             // 打开文件按钮
-            openFileButton.setOnAction(_ -> App.hostServices.showDocument(super.m3u8.filePath().toString()));
+            openFileButton.setOnAction(_ -> App.hostServices.showDocument(super.getValue().toString()));
             clearAndAddButton(openFileButton, resetButton);
         }
 
@@ -890,7 +884,8 @@ public class DownloadView extends BorderPane {
         public void retryableFailure(Throwable e) {
             super.retryableFailure(e);
             ErrorAlert.show(DownloadView.super.getScene().getWindow(),
-                    "下载任务执行异常", e);
+                    "可重试下载任务执行异常", e);
+            pauseEditParameter();
             // 继续和取消按钮
             clearAndAddButton(retryButton, cancelButton);
         }
@@ -979,79 +974,112 @@ public class DownloadView extends BorderPane {
         alert.show();
     }
 
+    private M3U8 checkAndGetM3U8() {
+        // m3u8地址
+        final String m3u8URI = uriTextArea.getText().strip();
+        // 去除前后空白
+        uriTextArea.setText(m3u8URI);
+        // 参数校验
+        if (m3u8URI.isBlank()) {
+            uriTextAreaAlert("m3u8地址不能为空");
+            return null;
+        }
+        // 校验合法URL
+        final URI uri;
+        try {
+            uri = URI.create(m3u8URI);
+            final String scheme = uri.getScheme();
+            // 不是http 或 https
+            if (!"https".equals(scheme) && !"http".equals(scheme)) {
+                uriTextAreaAlert("m3u8地址不是http协议");
+                return null;
+            }
+        }
+        catch (IllegalArgumentException _) {
+            uriTextAreaAlert("请输入正确的m3u8地址");
+            return null;
+        }
+
+        // http代理
+        final String hostname = httpProxyHostname.getText();
+        InetSocketAddress inetSocketAddress = null;
+        if (!hostname.isEmpty()) {
+            final InetAddress inetAddress;
+            try {
+                inetAddress = InetAddress.getByName(hostname);
+            }
+            catch (UnknownHostException e) {
+                final Alert alert = parameterInvalidAlert(httpProxyHostname, "无效的主机地址");
+                alert.setHeaderText("http代理主机地址");
+                alert.show();
+                return null;
+            }
+            inetSocketAddress = new InetSocketAddress(inetAddress, httpProxyPort.getValue());
+        }
+        final ProxySelector proxySelector = ProxySelector.of(inetSocketAddress);
+
+        // 文件路径
+        final Path downloadDirPath = Path.of(directoryLink.getText());
+        String fileNameString = fileNameTextField.getText();
+        if (fileNameString.isBlank()) {
+            fileNameString = String.valueOf(Instant.now().toEpochMilli());
+        }
+        final Path filePath;
+        try {
+            filePath = downloadDirPath.resolve(fileNameString + ".mp4");
+        }
+        // 包含无效字符
+        catch (InvalidPathException _) {
+            fileNameAlert("文件名包含无效字符");
+            return null;
+        }
+
+        // 文件是否已存在
+        if (Files.exists(filePath)) {
+            fileNameAlert(filePath.getFileName() + "已存在");
+            return null;
+        }
+
+        // 文件下载临时目录
+        final Path downloadTempDirPath = downloadDirPath.resolve(fileNameString + "-temp");
+        if (Files.exists(downloadTempDirPath)) {
+            fileNameAlert("文件下载临时目录已存在");
+            return null;
+        }
+
+        // 响应超时
+        final Duration timeout = Duration.ofSeconds(responseTimeout.getValue());
+
+        return new M3U8(uri, proxySelector, filePath, downloadTempDirPath, timeout);
+    }
+
+
+    private void pauseEditParameter() {
+        httpProxyHostname.setDisable(false);
+        httpProxyPort.setDisable(false);
+        fileNameTextField.setDisable(false);
+        responseTimeout.setDisable(false);
+        chooseDirButton.setDisable(false);
+    }
+
+    private void continueDisableParameter() {
+        httpProxyHostname.setDisable(true);
+        httpProxyPort.setDisable(true);
+        fileNameTextField.setDisable(true);
+        responseTimeout.setDisable(true);
+        chooseDirButton.setDisable(true);
+    }
+
     private void downloadEvent() {
         // 下载按钮
-        downloadButton.setOnAction(_ -> {
-            // m3u8地址
-            final String m3u8URI = Optional.ofNullable(uriTextArea.getText()).orElse("").strip();
-            // 去除前后空白
-            uriTextArea.setText(m3u8URI);
-            // 参数校验
-            if (m3u8URI.isBlank()) {
-                uriTextAreaAlert("m3u8地址不能为空");
-                return;
-            }
-            // 校验合法URL
-            final URI uri;
-            try {
-                uri = URI.create(m3u8URI);
-                final String scheme = uri.getScheme();
-                // 不是http 或 https
-                if (!"https".equals(scheme) && !"http".equals(scheme)) {
-                    uriTextAreaAlert("m3u8地址不是http协议");
-                    return;
-                }
-            }
-            catch (IllegalArgumentException _) {
-                uriTextAreaAlert("请输入正确的m3u8地址");
-                return;
-            }
-
-            // http代理
-            final String hostname = httpProxyHostname.getText();
-            InetSocketAddress inetSocketAddress = null;
-            if (!hostname.isEmpty()) {
-                inetSocketAddress = new InetSocketAddress(hostname, httpProxyPort.getValue());
-            }
-            final ProxySelector proxySelector = ProxySelector.of(inetSocketAddress);
-
-            // 文件路径
-            final Path downloadDirPath = Path.of(directoryLink.getText());
-            String fileNameString = fileNameTextField.getText();
-            if (fileNameString == null || fileNameString.isBlank()) {
-                fileNameString = String.valueOf(Instant.now().toEpochMilli());
-            }
-            final Path filePath;
-            try {
-                filePath = downloadDirPath.resolve(fileNameString + ".mp4");
-            }
-            // 包含无效字符
-            catch (InvalidPathException _) {
-                fileNameAlert("文件名包含无效字符");
-                return;
-            }
-
-            // 文件是否已存在
-            if (Files.exists(filePath)) {
-                fileNameAlert(filePath.getFileName() + "已存在");
-                return;
-            }
-
-            // 文件下载临时目录
-            final Path downloadTempDirPath = downloadDirPath.resolve(fileNameString + "-temp");
-            if (Files.exists(downloadTempDirPath)) {
-                fileNameAlert("文件下载临时目录已存在");
-                return;
-            }
-
-            final Duration timeout = Duration.ofSeconds(responseTimeout.getValue());
-            m3u8Service.start(new M3U8(uri, proxySelector,
-                    filePath, downloadTempDirPath, timeout));
-        });
+        downloadButton.setOnAction(_ -> Optional
+                .ofNullable(checkAndGetM3U8())
+                .ifPresent(m3u8Service::start));
 
         // 暂停按钮事件
         pauseButton.setOnAction(_ -> {
             if (m3u8Service.pause()) {
+                pauseEditParameter();
                 // 继续和取消按键
                 clearAndAddButton(continueButton, cancelButton);
             }
@@ -1059,7 +1087,9 @@ public class DownloadView extends BorderPane {
 
         // 继续按钮事件
         continueButton.setOnAction(_ -> {
-            if (m3u8Service.resume()) {
+            final M3U8 m3U8 = checkAndGetM3U8();
+            if (m3U8 != null && m3u8Service.resume(m3U8)) {
+                continueDisableParameter();
                 // 暂停按钮
                 clearAndAddButton(pauseButton, cancelButton);
             }
@@ -1071,14 +1101,16 @@ public class DownloadView extends BorderPane {
         // 重置按钮事件
         resetButton.setOnAction(_ -> {
             m3u8Service.reset();
-            uriTextArea.setText(null);
-            fileNameTextField.setText(null);
+            uriTextArea.setText("");
+            fileNameTextField.setText("");
             clearAndAddButton(downloadButton);
         });
 
         // 重试按钮操作
         retryButton.setOnAction(_ -> {
-            if (m3u8Service.retry()) {
+            final M3U8 m3U8 = checkAndGetM3U8();
+            if (m3U8 != null && m3u8Service.retry(m3U8)) {
+                continueDisableParameter();
                 clearAndAddButton(pauseButton, cancelButton);
             }
         });

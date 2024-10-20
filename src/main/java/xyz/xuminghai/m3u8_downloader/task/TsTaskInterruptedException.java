@@ -626,7 +626,6 @@
 
 package xyz.xuminghai.m3u8_downloader.task;
 
-import lombok.Getter;
 import xyz.xuminghai.m3u8_downloader.m3u8.TsFile;
 
 import java.util.List;
@@ -636,12 +635,16 @@ import java.util.List;
  *
  * @author xuMingHai
  */
-@Getter
-public class TsTaskInterruptedException extends InterruptedException {
+public class TsTaskInterruptedException extends InterruptedException implements TsTaskException {
 
     private final List<TsFile> doneTask;
 
     public TsTaskInterruptedException(List<TsFile> doneTask) {
         this.doneTask = doneTask;
+    }
+
+    @Override
+    public List<TsFile> getDoneTask() {
+        return doneTask;
     }
 }
