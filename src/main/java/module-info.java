@@ -653,7 +653,6 @@ module xyz.xuminghai.m3u8_downloader {
     provides ch.qos.logback.classic.spi.Configurator with LogbackConfig;
 
     exports xyz.xuminghai.m3u8_downloader to javafx.graphics;
-    exports xyz.xuminghai.m3u8_downloader.config.logback to ch.qos.logback.core;
 
     opens css;
     opens img;

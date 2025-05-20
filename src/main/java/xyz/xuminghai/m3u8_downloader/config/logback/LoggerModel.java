@@ -705,7 +705,7 @@ public enum LoggerModel {
         PatternLayout patternLayout = new PatternLayout();
         patternLayout.setContext(loggerContext);
         // 自定义高亮转换
-        patternLayout.getDefaultConverterMap().put("highlight", HighlightCompositeConverter.class.getName());
+        patternLayout.getDefaultConverterSupplierMap().put("highlight", HighlightCompositeConverter::new);
         patternLayout.setPattern("%d %highlight(%-5level) [%thread] --- %cyan(%logger{25}) : %msg %n");
         // 激活配置
         patternLayout.start();

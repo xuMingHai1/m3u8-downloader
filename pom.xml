@@ -638,11 +638,11 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>23</maven.compiler.source>
-        <maven.compiler.target>23</maven.compiler.target>
-        <javafx.version>23</javafx.version>
-        <lombok.version>1.18.34</lombok.version>
-        <javacpp.ffmpeg.version>6.1.1-1.5.10</javacpp.ffmpeg.version>
+        <maven.compiler.source>24</maven.compiler.source>
+        <maven.compiler.target>24</maven.compiler.target>
+        <javafx.version>24.0.1</javafx.version>
+        <lombok.version>1.18.38</lombok.version>
+        <javacpp.ffmpeg.version>7.1-1.5.11</javacpp.ffmpeg.version>
         <main.class>xyz.xuminghai.m3u8_downloader/xyz.xuminghai.m3u8_downloader.App</main.class>
     </properties>
 
@@ -697,7 +697,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.10</version>
+            <version>1.5.18</version>
         </dependency>
 
         <!-- 自动资源管理、自动生成 getter、setter、equals、hashCode 和 toString 等等！ -->
@@ -726,7 +726,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.10.2</version>
+            <version>5.12.2</version>
             <scope>test</scope>
         </dependency>
 
@@ -821,7 +821,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.14.0</version>
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
