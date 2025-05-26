@@ -656,14 +656,14 @@ public final class BitstreamUtils {
             Pb_DECIMAL = new BigDecimal(Pb_INTEGER);
 
     /**
-     * 将文件字节大小转为比特流字符串
+     * 将字节大小转为比特流字符串
      *
-     * @param fileSize 字节大小
+     * @param byteSize 字节大小
      * @return 比特流字符串
      */
-    public static String fileSizeConvertBitstreamString(long fileSize) {
+    public static String byteSizeConvertBitstreamString(long byteSize) {
         // 文件大小的比特数量
-        final BigInteger bitBigInteger = BigInteger.valueOf(fileSize).multiply(BYTE_BIT);
+        final BigInteger bitBigInteger = BigInteger.valueOf(byteSize).multiply(BYTE_BIT);
 
         if (bitBigInteger.compareTo(Kb_INTEGER) < 0) {
             return bitBigInteger.toString().concat("b");

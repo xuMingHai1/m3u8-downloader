@@ -683,11 +683,11 @@ public interface CommonData {
     /**
      * 发布地址
      */
-    String RELEASE_URI = HOME_URI.concat("/releases");
+    String RELEASE_URI = HOME_URI + "/releases";
 
     /**
      * 帮助地址
      */
-    String HELP_URI = HOME_URI.concat("/issues");
+    String HELP_URI = HOME_URI + "/issues";
 
 }

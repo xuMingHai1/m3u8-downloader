@@ -1214,10 +1214,10 @@ public class M3U8Task extends Task<Path> {
                     }
 
                     final long currentDownloadByte = getM3U8HttpClient().currentDownloadByte();
-                    final String downloadSpeed = BitstreamUtils.fileSizeConvertBitstreamString(currentDownloadByte - lastDirectorySize);
+                    final String downloadSpeed = BitstreamUtils.byteSizeConvertBitstreamString(currentDownloadByte - lastDirectorySize);
                     lastDirectorySize = currentDownloadByte;
-                    log.debug("下载速率 = {}/s", downloadSpeed);
-                    updateDownloadSpeed(downloadSpeed.concat("/s"));
+                    log.debug("下载速率 = {}ps", downloadSpeed);
+                    updateDownloadSpeed(downloadSpeed.concat("ps"));
                 }
             }
         });
