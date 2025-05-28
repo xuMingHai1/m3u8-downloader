@@ -649,6 +649,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
@@ -1115,8 +1116,7 @@ public class M3U8Task extends Task<Path> {
             log.info("修改下载临时目录，src = {} dst= {}",
                     last.downloadTempDirPath(), current.downloadTempDirPath());
             super.updateMessage("修改下载临时目录");
-            Files.createDirectory(current.downloadTempDirPath());
-            DirectoryUtils.moveDirectory(last.downloadTempDirPath(), current.downloadTempDirPath());
+            Files.move(last.downloadTempDirPath(), current.downloadTempDirPath(), StandardCopyOption.REPLACE_EXISTING);
         }
 
         getM3U8HttpClient().close();

@@ -627,7 +627,10 @@
 package xyz.xuminghai.m3u8_downloader.util;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 
@@ -641,6 +644,11 @@ public final class DirectoryUtils {
     private DirectoryUtils() {
     }
 
+    /**
+     * 删除整个文件树
+     * @param path 文件路径
+     * @throws IOException IOException
+     */
     public static void deleteDirectory(Path path) throws IOException {
         Objects.requireNonNull(path);
 
@@ -653,50 +661,6 @@ public final class DirectoryUtils {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Files.delete(file);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                throw exc;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if (exc == null) {
-                    Files.delete(dir);
-                    return FileVisitResult.CONTINUE;
-                }
-                else {
-                    throw exc;
-                }
-            }
-        });
-    }
-
-    public static void moveDirectory(Path src, Path dst) throws IOException {
-        Objects.requireNonNull(src);
-        Objects.requireNonNull(dst);
-
-        // 相同FilesStore
-        if (Files.getFileStore(src).equals(Files.getFileStore(dst))) {
-            Files.move(src, dst, StandardCopyOption.REPLACE_EXISTING);
-            return;
-        }
-
-        Files.walkFileTree(src, new FileVisitor<>() {
-
-            private Path currentDir;
-
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                Files.createDirectory(currentDir = dst.resolve(src.relativize(dir)));
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Files.move(file, currentDir.resolve(file.getFileName()));
                 return FileVisitResult.CONTINUE;
             }
 

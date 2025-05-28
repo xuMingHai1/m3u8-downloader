@@ -652,6 +652,12 @@ public final class FileSizeUtils {
             GB_DECIMAL = new BigDecimal(GB),
             TB_DECIMAL = new BigDecimal(TB);
 
+    /**
+     * 将字节大小转换为带有字节大小单位的字符串<br/>
+     * 例如 10240 ——> 10KB
+     * @param size 字节大小
+     * @return 带有字节单位的字符串
+     */
     public static String convertString(long size) {
         if (size < KB) {
             return size + "B";
