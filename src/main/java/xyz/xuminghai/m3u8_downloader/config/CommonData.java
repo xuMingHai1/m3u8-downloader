@@ -656,6 +656,11 @@ public interface CommonData {
     ExecutorService EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
+     * 开发者模式
+     */
+    boolean devModel = Boolean.TRUE.toString().equalsIgnoreCase(System.getProperty("app.devModel"));
+
+    /**
      * 应用图标
      */
     Image APP_ICON = new Image("/img/app-icon.png");

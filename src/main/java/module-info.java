@@ -633,6 +633,8 @@ module xyz.xuminghai.m3u8_downloader {
     requires java.net.http;
     // atlantafxUI
     requires atlantafx.base;
+    // devtoolsfx
+    requires devtoolsfx.gui;
     // logback
     requires ch.qos.logback.classic;
     requires ch.qos.logback.core;

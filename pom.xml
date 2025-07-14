@@ -642,7 +642,7 @@
         <maven.compiler.target>24</maven.compiler.target>
         <javafx.version>24.0.1</javafx.version>
         <lombok.version>1.18.38</lombok.version>
-        <javacpp.ffmpeg.version>7.1-1.5.11</javacpp.ffmpeg.version>
+        <javacpp.ffmpeg.version>7.1.1-1.5.12</javacpp.ffmpeg.version>
         <main.class>xyz.xuminghai.m3u8_downloader/xyz.xuminghai.m3u8_downloader.App</main.class>
     </properties>
 
@@ -684,7 +684,19 @@
         <dependency>
             <groupId>io.github.mkpaz</groupId>
             <artifactId>atlantafx-base</artifactId>
-            <version>2.0.1</version>
+            <version>2.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-controls</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.mkpaz</groupId>
+            <artifactId>devtoolsfx-gui</artifactId>
+            <version>1.0.1</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.openjfx</groupId>
@@ -720,21 +732,6 @@
             <artifactId>ffmpeg</artifactId>
             <version>${javacpp.ffmpeg.version}</version>
             <classifier>${javacpp.ffmpeg.platform}</classifier>
-        </dependency>
-
-        <!-- test -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>5.12.2</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.testfx</groupId>
-            <artifactId>testfx-junit5</artifactId>
-            <version>4.0.18</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

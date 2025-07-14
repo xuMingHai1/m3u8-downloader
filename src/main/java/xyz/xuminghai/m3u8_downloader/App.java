@@ -627,6 +627,7 @@
 package xyz.xuminghai.m3u8_downloader;
 
 import atlantafx.base.theme.PrimerLight;
+import devtoolsfx.gui.GUI;
 import javafx.application.Application;
 import javafx.application.HostServices;
 import javafx.scene.Scene;
@@ -634,8 +635,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Stage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import xyz.xuminghai.m3u8_downloader.config.CommonData;
 import xyz.xuminghai.m3u8_downloader.control.ErrorAlert;
 import xyz.xuminghai.m3u8_downloader.view.MainView;
@@ -648,9 +648,8 @@ import java.time.LocalTime;
  *
  * @author xuMingHai
  */
+@Slf4j
 public class App extends Application {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
 
     /**
      * 启动时间
@@ -675,11 +674,18 @@ public class App extends Application {
         primaryStage.getIcons().addAll(CommonData.APP_ICON);
         primaryStage.setScene(createScene());
         primaryStage.setResizable(false);
+        primaryStage.setOnShown(_ -> {
+                    if (CommonData.devModel) {
+                        GUI.openToolStage(primaryStage, getHostServices());
+                    }
+                }
+        );
+
         // JavaFX线程设置错误提示
         Thread.currentThread().setUncaughtExceptionHandler((_, e) -> ErrorAlert.show(primaryStage, "未知的错误", e));
         // 显示窗体
         primaryStage.show();
-        LOGGER.info("启动完成耗时 = {}ms", System.currentTimeMillis() - BOOT_TIME);
+        log.info("启动完成耗时 = {}ms", System.currentTimeMillis() - BOOT_TIME);
     }
 
     @Override
@@ -692,7 +698,7 @@ public class App extends Application {
         // Control + Enter 重新加载
         scene.getAccelerators().put(new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN),
                 () -> {
-                    LOGGER.debug("重新加载时间 = {}", LocalTime.now());
+                    log.debug("重新加载时间 = {}", LocalTime.now());
                     try {
                         scene.setRoot(scene.getRoot().getClass().getConstructor().newInstance());
                     }
