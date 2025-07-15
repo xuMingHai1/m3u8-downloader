@@ -631,6 +631,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.Configurator;
 import ch.qos.logback.core.spi.ContextAwareBase;
 import org.slf4j.Logger;
+import xyz.xuminghai.m3u8_downloader.config.CommonData;
 
 
 /**
@@ -641,8 +642,10 @@ import org.slf4j.Logger;
  */
 public class LogbackConfig extends ContextAwareBase implements Configurator {
 
-    private static final LoggerModel LOGGER_MODEL = LoggerModel.modelOf(System.getProperty("app.loggerModel"));
-    private static final Level LOGGER_LEVEL = Level.toLevel(System.getProperty("app.loggerLevel"), Level.INFO);
+    private static final LoggerModel LOGGER_MODEL = LoggerModel.modelOf(System.getProperty("app.loggerModel"),
+            CommonData.devModel ? LoggerModel.CONSOLE : LoggerModel.FILE);
+    private static final Level LOGGER_LEVEL = Level.toLevel(System.getProperty("app.loggerLevel"),
+            CommonData.devModel ? Level.DEBUG : Level.INFO);
 
     @Override
     public ExecutionStatus configure(LoggerContext loggerContext) {

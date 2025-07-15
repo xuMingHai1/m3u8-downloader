@@ -656,9 +656,7 @@ public enum LoggerModel {
     FILE;
 
 
-    static LoggerModel modelOf(String model) {
-        final LoggerModel defaultModel = FILE;
-
+    static LoggerModel modelOf(String model, LoggerModel defaultModel) {
         if (model == null) {
             return defaultModel;
         }
