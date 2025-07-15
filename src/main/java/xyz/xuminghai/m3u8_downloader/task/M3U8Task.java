@@ -652,7 +652,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -676,7 +679,6 @@ public class M3U8Task extends Task<Path> {
 
     private List<TsFile> tsFileList;
 
-    private final long taskMaxWaitTime;
     private final long startTime = System.currentTimeMillis();
 
 
@@ -689,7 +691,6 @@ public class M3U8Task extends Task<Path> {
         lastM3U8.setOpaque(m3u8);
         currentM3U8.setOpaque(m3u8);
         m3u8HttpClient.setOpaque(new M3U8HttpClient(m3u8.timeout(), m3u8.downloadTempDirPath(), m3u8.proxySelector()));
-        this.taskMaxWaitTime = m3u8.timeout().toMillis();
         log.info("M3U8任务创建完成，{}", m3u8);
     }
 
@@ -911,12 +912,8 @@ public class M3U8Task extends Task<Path> {
         while (!undoneTask.isEmpty()) {
             final Iterator<Future<TsFile>> iterator = undoneTask.iterator();
             while (iterator.hasNext()) {
-                // 计算等待时长，size越大等待时间越短，反之越小等待时间越大
-                final double d = 1.0 / undoneTask.size();
-                long min = 1L;
-                final long timeout = min + (long) ((taskMaxWaitTime - min) * d);
                 try {
-                    final TsFile tsFile = iterator.next().get(timeout, TimeUnit.MILLISECONDS);
+                    final TsFile tsFile = iterator.next().get();
                     doneTask.add(tsFile);
                     // 任务完成后从未完成任务列表删除
                     iterator.remove();
@@ -941,9 +938,6 @@ public class M3U8Task extends Task<Path> {
                             .log();
                     undoneTask.forEach(future -> future.cancel(true));
                     throw new TsExecutionException(doneTask, e.getCause());
-                }
-                catch (TimeoutException _) {
-                    // 等待超时，获取下一个任务
                 }
             }
             log.atInfo().setMessage("undoneTask.size = {}")

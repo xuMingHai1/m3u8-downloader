@@ -675,7 +675,7 @@ public class M3U8HttpClient implements AutoCloseable {
     /**
      * 最大等待时长阈值
      */
-    static final Duration MAX_TIMEOUT = Duration.ofSeconds(60L);
+    static final Duration MAX_TIMEOUT = Duration.ofSeconds(30L);
 
     /**
      * 默认休眠时长

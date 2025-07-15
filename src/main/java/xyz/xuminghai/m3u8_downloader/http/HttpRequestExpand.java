@@ -656,6 +656,9 @@ sealed abstract class HttpRequestExpand
         if (M3U8HttpClient.MAX_TIMEOUT.compareTo(timeout) > 0) {
             timeout = timeout.plus(duration);
         }
+        else {
+            timeout = duration;
+        }
     }
 
     public void plusSleep(long millisecond) {
