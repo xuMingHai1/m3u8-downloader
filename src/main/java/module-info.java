@@ -649,7 +649,7 @@ module xyz.xuminghai.m3u8_downloader {
 //    requires org.bytedeco.ffmpeg.linux.arm64;
 //    requires org.bytedeco.ffmpeg.macosx.arm64;
 //    requires org.bytedeco.ffmpeg.macosx.x86_64;
-    requires org.bytedeco.ffmpeg.windows.x86_64;
+//    requires org.bytedeco.ffmpeg.windows.x86_64;
 
     // logback 自定义配置实现类
     provides ch.qos.logback.classic.spi.Configurator with LogbackConfig;

@@ -989,6 +989,10 @@ public class M3U8HttpClient implements AutoCloseable {
                     log.trace("HTTP/1.1 header 没有数据", e);
                     httpRequestExpand.plusSleep(SLEEP_TIME);
                 }
+                else if ("Connection reset by peer".equals(message)) {
+                    log.trace("连接重置", e);
+                    httpRequestExpand.plusSleep(SLEEP_TIME);
+                }
                 else {
                     throw e;
                 }
