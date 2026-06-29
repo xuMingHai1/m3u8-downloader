@@ -633,8 +633,6 @@ module xyz.xuminghai.m3u8_downloader {
     requires java.net.http;
     // atlantafxUI
     requires atlantafx.base;
-    // devtoolsfx
-    requires devtoolsfx.gui;
     // logback
     requires ch.qos.logback.classic;
     requires ch.qos.logback.core;
@@ -644,12 +642,6 @@ module xyz.xuminghai.m3u8_downloader {
     // ffmpeg
     requires org.bytedeco.javacpp;
     requires org.bytedeco.ffmpeg;
-    // jlink需要（特定平台）
-//    requires org.bytedeco.ffmpeg.linux.x86_64;
-//    requires org.bytedeco.ffmpeg.linux.arm64;
-//    requires org.bytedeco.ffmpeg.macosx.arm64;
-//    requires org.bytedeco.ffmpeg.macosx.x86_64;
-//    requires org.bytedeco.ffmpeg.windows.x86_64;
 
     // logback 自定义配置实现类
     provides ch.qos.logback.classic.spi.Configurator with LogbackConfig;

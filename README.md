@@ -20,6 +20,21 @@
 
 ![img.png](md_data/app.png)
 
+#### 便携版打包
+
+项目使用 `jlink + jpackage` 生成无需安装的便携版应用目录。构建命令：
+
+```shell
+mvn clean verify -P portable
+```
+
+构建完成后主要产物：
+
+- `target/jpackage/m3u8-downloader/`：可直接运行的便携版应用目录，内置精简 Java Runtime。
+- `target/m3u8-downloader-0.0.2-<platform>.zip`：便携版压缩包，解压后即可运行。
+
+注意：`jpackage` 只能生成当前操作系统对应的平台应用目录；例如 Windows 上生成 Windows 便携版，macOS 上生成 macOS 便携版。
+
 #### 下载软件
 
 [软件发布地址](../../releases)
