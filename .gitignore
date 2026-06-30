@@ -1,11 +1,25 @@
-# 忽略 idea 配置
-/.idea
+# IDE
+/.idea/
+*.iml
+rebel.xml
 
-# 忽略编译后的目录
-**/target
+# Build output
+target/
+**/target/
 
-# 忽略iml
-**/*.iml
+# Logs and runtime files
+*.log
+logs/
+hs_err_pid*
+replay_pid*
 
-# 忽略rebel.xml
-**/rebel.xml
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp

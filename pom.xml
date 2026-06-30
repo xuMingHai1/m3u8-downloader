@@ -805,7 +805,7 @@
             <activation>
                 <os>
                     <name>linux</name>
-                    <arch>arm64</arch>
+                    <arch>aarch64</arch>
                 </os>
             </activation>
             <properties>
@@ -860,7 +860,7 @@
             <activation>
                 <os>
                     <name>mac os x</name>
-                    <arch>arm64</arch>
+                    <arch>aarch64</arch>
                 </os>
             </activation>
             <properties>
