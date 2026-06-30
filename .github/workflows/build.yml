@@ -1,0 +1,136 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: oracle
+          java-version: "26"
+          cache: maven
+
+      - name: Test with Maven
+        run: ./mvnw.cmd -B test
+
+  package:
+    name: Package ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    needs: test
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x86_64
+            os: windows-latest
+            maven-command: ./mvnw.cmd
+            profiles: portable,windows-x86_64
+          - platform: linux-x86_64
+            os: ubuntu-latest
+            maven-command: bash ./mvnw
+            profiles: portable,linux-x86_64
+          - platform: linux-arm64
+            os: ubuntu-24.04-arm
+            maven-command: bash ./mvnw
+            profiles: portable,linux-arm64
+          - platform: macosx-x86_64
+            os: macos-15-intel
+            maven-command: bash ./mvnw
+            profiles: portable,macosx-x86_64
+          - platform: macosx-arm64
+            os: macos-latest
+            maven-command: bash ./mvnw
+            profiles: portable,macosx-arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: oracle
+          java-version: "26"
+          cache: maven
+
+      - name: Build portable package
+        run: ${{ matrix.maven-command }} -B -DskipTests clean verify -P "${{ matrix.profiles }}"
+
+      - name: Generate checksum
+        shell: pwsh
+        run: |
+          $archive = Get-ChildItem -Path target -Filter "m3u8-downloader-*-${{ matrix.platform }}.zip" | Select-Object -First 1
+          if (-not $archive) {
+            throw "Portable package not found for ${{ matrix.platform }}."
+          }
+          $hash = Get-FileHash -Path $archive.FullName -Algorithm SHA256
+          $line = "{0}  {1}" -f $hash.Hash.ToLowerInvariant(), $archive.Name
+          Set-Content -Path "$($archive.FullName).sha256" -Value $line -Encoding ascii
+
+      - name: Upload portable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3u8-downloader-${{ matrix.platform }}-portable
+          path: |
+            target/m3u8-downloader-*-${{ matrix.platform }}.zip
+            target/m3u8-downloader-*-${{ matrix.platform }}.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download portable packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: m3u8-downloader-*-portable
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* \
+              --title "${GITHUB_REF_NAME}" \
+              --generate-notes
+          fi

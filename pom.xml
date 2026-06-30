@@ -637,13 +637,50 @@
     <packaging>jlink</packaging>
 
     <properties>
+        <!-- 基础构建配置 -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>26</maven.compiler.source>
         <maven.compiler.target>26</maven.compiler.target>
+
+        <!-- 依赖版本 -->
         <javafx.version>26.0.1</javafx.version>
+        <atlantafx.version>2.1.0</atlantafx.version>
+        <devtoolsfx.version>1.0.1</devtoolsfx.version>
+        <logback.version>1.5.37</logback.version>
         <lombok.version>1.18.46</lombok.version>
         <javacpp.ffmpeg.version>8.0.1-1.5.13</javacpp.ffmpeg.version>
-        <main.class>xyz.xuminghai.m3u8_downloader/xyz.xuminghai.m3u8_downloader.App</main.class>
+        <sqlite.jdbc.version>3.53.2.0</sqlite.jdbc.version>
+
+        <!-- Maven 插件版本 -->
+        <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
+        <maven.clean.plugin.version>3.5.0</maven.clean.plugin.version>
+        <maven.resources.plugin.version>3.5.0</maven.resources.plugin.version>
+        <maven.surefire.plugin.version>3.5.6</maven.surefire.plugin.version>
+        <maven.jlink.plugin.version>3.3.0</maven.jlink.plugin.version>
+        <maven.antrun.plugin.version>3.2.0</maven.antrun.plugin.version>
+
+        <!-- 模块化应用入口：module/mainClass -->
+        <main.module>xyz.xuminghai.m3u8_downloader</main.module>
+        <main.class.name>xyz.xuminghai.m3u8_downloader.App</main.class.name>
+        <main.class>${main.module}/${main.class.name}</main.class>
+
+        <!-- jpackage 默认值；Windows/macOS 会在平台 profile 中覆盖必要项 -->
+        <jpackage.executable>${java.home}/bin/jpackage</jpackage.executable>
+        <jpackage.app.dir.name>${project.name}</jpackage.app.dir.name>
+        <jpackage.icon>${project.basedir}/src/main/jpackage/app-icon.ico</jpackage.icon>
+        <jpackage.icon.args>--icon "${jpackage.icon}"</jpackage.icon.args>
+
+        <!-- jlink 运行时镜像；平台 FFmpeg 模块由各 OS profile 指定 -->
+        <jlink.runtime.image.name>${project.name}-runtime</jlink.runtime.image.name>
+        <jlink.zip.dir.prefix/>
+        <jlink.runtime.zip>${project.build.directory}/${project.build.finalName}.zip</jlink.runtime.zip>
+
+        <!-- portable profile 产物位置 -->
+        <portable.classifier>portable</portable.classifier>
+        <portable.work.dir>${project.build.directory}/jpackage-work</portable.work.dir>
+        <portable.runtime.dir>${portable.work.dir}/${jlink.runtime.image.name}</portable.runtime.dir>
+        <portable.output.dir>${project.build.directory}/jpackage</portable.output.dir>
+        <portable.archive>${project.build.directory}/${project.name}-${project.version}-${portable.classifier}.zip</portable.archive>
     </properties>
 
     <dependencies>
@@ -684,35 +721,35 @@
         <dependency>
             <groupId>io.github.mkpaz</groupId>
             <artifactId>atlantafx-base</artifactId>
-            <version>2.1.0</version>
+            <version>${atlantafx.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.openjfx</groupId>
                     <artifactId>javafx-controls</artifactId>
                 </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>io.github.mkpaz</groupId>
-            <artifactId>devtoolsfx-gui</artifactId>
-            <version>1.0.1</version>
-            <exclusions>
                 <exclusion>
-                    <groupId>org.openjfx</groupId>
-                    <artifactId>javafx-controls</artifactId>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-engine</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.assertj</groupId>
+                    <artifactId>assertj-core</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
 
-        <!-- logback经典，内部依赖了logback-core和slf4j -->
+        <!-- 日志实现，内部依赖 logback-core 和 slf4j -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.32</version>
+            <version>${logback.version}</version>
         </dependency>
 
-        <!-- 自动资源管理、自动生成 getter、setter、equals、hashCode 和 toString 等等！ -->
+        <!-- 编译期 Lombok 注解处理 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -720,13 +757,14 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- ffmpeg -->
+        <!-- JavaCPP FFmpeg API -->
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>ffmpeg</artifactId>
             <version>${javacpp.ffmpeg.version}</version>
         </dependency>
 
+        <!-- 当前平台的 FFmpeg native 运行库，classifier 由 OS profile 指定 -->
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>ffmpeg</artifactId>
@@ -734,11 +772,11 @@
             <classifier>${javacpp.ffmpeg.platform}</classifier>
         </dependency>
 
-        <!-- SQLite -->
+        <!-- SQLite JDBC 驱动 -->
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
-            <version>3.53.1.0</version>
+            <version>${sqlite.jdbc.version}</version>
         </dependency>
     </dependencies>
 
@@ -755,6 +793,9 @@
             <properties>
                 <javafx.platform>linux</javafx.platform>
                 <javacpp.ffmpeg.platform>linux-x86_64</javacpp.ffmpeg.platform>
+                <javacpp.ffmpeg.module>org.bytedeco.ffmpeg.linux.x86_64</javacpp.ffmpeg.module>
+                <jpackage.icon>${project.basedir}/src/main/resources/img/app-icon.png</jpackage.icon>
+                <portable.classifier>linux-x86_64</portable.classifier>
             </properties>
         </profile>
 
@@ -764,12 +805,15 @@
             <activation>
                 <os>
                     <name>linux</name>
-                    <arch>arm64</arch>
+                    <arch>aarch64</arch>
                 </os>
             </activation>
             <properties>
                 <javafx.platform>linux-aarch64</javafx.platform>
                 <javacpp.ffmpeg.platform>linux-arm64</javacpp.ffmpeg.platform>
+                <javacpp.ffmpeg.module>org.bytedeco.ffmpeg.linux.arm64</javacpp.ffmpeg.module>
+                <jpackage.icon>${project.basedir}/src/main/resources/img/app-icon.png</jpackage.icon>
+                <portable.classifier>linux-arm64</portable.classifier>
             </properties>
         </profile>
 
@@ -785,6 +829,9 @@
             <properties>
                 <javafx.platform>win</javafx.platform>
                 <javacpp.ffmpeg.platform>windows-x86_64</javacpp.ffmpeg.platform>
+                <javacpp.ffmpeg.module>org.bytedeco.ffmpeg.windows.x86_64</javacpp.ffmpeg.module>
+                <jpackage.executable>${java.home}/bin/jpackage.exe</jpackage.executable>
+                <portable.classifier>windows-x86_64</portable.classifier>
             </properties>
         </profile>
 
@@ -800,6 +847,10 @@
             <properties>
                 <javafx.platform>mac</javafx.platform>
                 <javacpp.ffmpeg.platform>macosx-x86_64</javacpp.ffmpeg.platform>
+                <javacpp.ffmpeg.module>org.bytedeco.ffmpeg.macosx.x86_64</javacpp.ffmpeg.module>
+                <jpackage.app.dir.name>${project.name}.app</jpackage.app.dir.name>
+                <jpackage.icon.args/>
+                <portable.classifier>macosx-x86_64</portable.classifier>
             </properties>
         </profile>
 
@@ -809,23 +860,148 @@
             <activation>
                 <os>
                     <name>mac os x</name>
-                    <arch>arm64</arch>
+                    <arch>aarch64</arch>
                 </os>
             </activation>
             <properties>
                 <javafx.platform>mac-aarch64</javafx.platform>
                 <javacpp.ffmpeg.platform>macosx-arm64</javacpp.ffmpeg.platform>
+                <javacpp.ffmpeg.module>org.bytedeco.ffmpeg.macosx.arm64</javacpp.ffmpeg.module>
+                <jpackage.app.dir.name>${project.name}.app</jpackage.app.dir.name>
+                <jpackage.icon.args/>
+                <portable.classifier>macosx-arm64</portable.classifier>
             </properties>
+        </profile>
+
+        <!-- 开发调试工具，默认不参与正式 jlink/portable 打包；使用 -P dev 启用 -->
+        <profile>
+            <id>dev</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.github.mkpaz</groupId>
+                    <artifactId>devtoolsfx-gui</artifactId>
+                    <version>${devtoolsfx.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.openjfx</groupId>
+                            <artifactId>javafx-controls</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.junit.jupiter</groupId>
+                            <artifactId>junit-jupiter-api</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.junit.jupiter</groupId>
+                            <artifactId>junit-jupiter-engine</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.junit.jupiter</groupId>
+                            <artifactId>junit-jupiter-params</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.assertj</groupId>
+                            <artifactId>assertj-core</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jlink-plugin</artifactId>
+                        <configuration>
+                            <addModules combine.children="append">
+                                <addModule>devtoolsfx.gui</addModule>
+                            </addModules>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- 便携版 app-image 打包，默认不启用；使用 -P portable 触发 -->
+        <profile>
+            <id>portable</id>
+            <properties>
+                <jlink.zip.dir.prefix>${jlink.runtime.image.name}</jlink.zip.dir.prefix>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>${maven.antrun.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage-portable-app-image</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target name="jpackage-portable-app-image">
+                                        <delete dir="${portable.work.dir}"/>
+                                        <mkdir dir="${portable.work.dir}"/>
+                                        <unzip src="${jlink.runtime.zip}" dest="${portable.work.dir}"/>
+
+                                        <delete dir="${portable.output.dir}/${jpackage.app.dir.name}"/>
+                                        <mkdir dir="${portable.output.dir}"/>
+                                        <exec executable="${jpackage.executable}" failonerror="true">
+                                            <env key="JAVA_TOOL_OPTIONS" value="-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8"/>
+                                            <arg value="--type"/>
+                                            <arg value="app-image"/>
+                                            <arg value="--name"/>
+                                            <arg value="${project.name}"/>
+                                            <arg value="--app-version"/>
+                                            <arg value="${project.version}"/>
+                                            <arg value="--description"/>
+                                            <arg value="M3U8 video downloader"/>
+                                            <arg value="--vendor"/>
+                                            <arg value="xuMingHai"/>
+                                            <arg value="--dest"/>
+                                            <arg value="${portable.output.dir}"/>
+                                            <arg line="${jpackage.icon.args}"/>
+                                            <arg value="--runtime-image"/>
+                                            <arg value="${portable.runtime.dir}"/>
+                                            <arg value="--module"/>
+                                            <arg value="${main.class}"/>
+                                            <arg value="--verbose"/>
+                                        </exec>
+
+                                        <delete file="${portable.archive}"/>
+                                        <zip destfile="${portable.archive}" basedir="${portable.output.dir}" includes="${jpackage.app.dir.name}/**"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
     <build>
         <plugins>
+            <!-- maven-clean-plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven.clean.plugin.version}</version>
+            </plugin>
+
+            <!-- maven-resources-plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven.resources.plugin.version}</version>
+            </plugin>
+
             <!-- maven-compiler-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.15.0</version>
+                <version>${maven.compiler.plugin.version}</version>
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
@@ -837,14 +1013,24 @@
                 </configuration>
             </plugin>
 
+            <!-- maven-surefire-plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.plugin.version}</version>
+            </plugin>
+
             <!-- maven-jlink-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jlink-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>${maven.jlink.plugin.version}</version>
                 <extensions>true</extensions>
                 <configuration>
                     <launcher>${project.name}=${main.class}</launcher>
+                    <addModules>
+                        <addModule>${javacpp.ffmpeg.module}</addModule>
+                    </addModules>
                     <addOptions>
                         <addOption>-XX:+UseZGC</addOption>
                     </addOptions>
@@ -853,6 +1039,7 @@
                     <ignoreSigningInformation>true</ignoreSigningInformation>
                     <noHeaderFiles>true</noHeaderFiles>
                     <noManPages>true</noManPages>
+                    <zipDirPrefix>${jlink.zip.dir.prefix}</zipDirPrefix>
                     <verbose>true</verbose>
                 </configuration>
             </plugin>

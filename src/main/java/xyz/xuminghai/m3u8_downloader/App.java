@@ -627,7 +627,6 @@
 package xyz.xuminghai.m3u8_downloader;
 
 import atlantafx.base.theme.PrimerLight;
-import devtoolsfx.gui.GUI;
 import javafx.application.Application;
 import javafx.application.HostServices;
 import javafx.scene.Scene;
@@ -674,18 +673,30 @@ public class App extends Application {
         primaryStage.getIcons().addAll(CommonData.APP_ICON);
         primaryStage.setScene(createScene());
         primaryStage.setResizable(false);
-        primaryStage.setOnShown(_ -> {
-                    if (CommonData.devModel) {
-                        GUI.openToolStage(primaryStage, getHostServices());
-                    }
-                }
-        );
+        primaryStage.setOnShown(_ -> openDevTools(primaryStage));
 
         // JavaFX线程设置错误提示
         Thread.currentThread().setUncaughtExceptionHandler((_, e) -> ErrorAlert.show(primaryStage, "未知的错误", e));
         // 显示窗体
         primaryStage.show();
         log.info("启动完成耗时 = {}ms", System.currentTimeMillis() - BOOT_TIME);
+    }
+
+    private void openDevTools(Stage primaryStage) {
+        if (!CommonData.devModel) {
+            return;
+        }
+        try {
+            Class.forName("devtoolsfx.gui.GUI")
+                    .getMethod("openToolStage", Stage.class, HostServices.class)
+                    .invoke(null, primaryStage, getHostServices());
+        }
+        catch (ClassNotFoundException e) {
+            log.warn("DevToolsFX is not available. Enable the dev profile to use developer tools.", e);
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to open DevToolsFX.", e);
+        }
     }
 
     @Override
