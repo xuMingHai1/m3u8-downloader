@@ -632,6 +632,7 @@ import xyz.xuminghai.m3u8_downloader.m3u8.KeyMethodEnum;
 import xyz.xuminghai.m3u8_downloader.m3u8.M3U8Key;
 import xyz.xuminghai.m3u8_downloader.m3u8.MediaPlay;
 import xyz.xuminghai.m3u8_downloader.m3u8.TsFile;
+import xyz.xuminghai.m3u8_downloader.util.LogMaskUtils;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -654,7 +655,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
@@ -685,6 +690,12 @@ public class M3U8HttpClient implements AutoCloseable {
     private final ConcurrentLinkedQueue<Thread> sleepQueue = new ConcurrentLinkedQueue<>();
     private final LongAdder networkExceptionCount = new LongAdder();
     private static final long NETWORK_EXCEPTION_BASE = 20L;
+    private static final Set<String> SENSITIVE_HEADER_NAMES = Set.of(
+            "authorization",
+            "cookie",
+            "proxy-authorization",
+            "set-cookie"
+    );
     private final AtomicLong networkExceptionThreshold = new AtomicLong();
     private final LongAdder downloadByteCount = new LongAdder();
 
@@ -1063,10 +1074,10 @@ public class M3U8HttpClient implements AutoCloseable {
                 version = %s
                 headers = %s
                 """.formatted(httpRequest.method(),
-                httpRequest.uri(),
+                LogMaskUtils.uri(httpRequest.uri()),
                 httpRequest.timeout(),
                 httpRequest.version(),
-                httpRequest.headers());
+                headersLog(httpRequest.headers()));
     }
 
     private String httpResponseLog(HttpResponse<?> httpResponse) {
@@ -1076,9 +1087,31 @@ public class M3U8HttpClient implements AutoCloseable {
                 version = %s
                 headers = %s
                 """.formatted(httpResponse.statusCode(),
-                httpResponse.uri(),
+                LogMaskUtils.uri(httpResponse.uri()),
                 httpResponse.version(),
-                httpResponse.headers());
+                headersLog(httpResponse.headers()));
+    }
+
+    private static String headersLog(HttpHeaders headers) {
+        final Map<String, List<String>> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        headers.map().forEach((name, values) -> {
+            if (isSensitiveHeader(name)) {
+                map.put(name, List.of(LogMaskUtils.MASK));
+            }
+            else {
+                map.put(name, values);
+            }
+        });
+        return map.toString();
+    }
+
+    private static boolean isSensitiveHeader(String name) {
+        final String normalizedName = name.toLowerCase(Locale.ROOT);
+        return SENSITIVE_HEADER_NAMES.contains(normalizedName) ||
+                normalizedName.contains("token") ||
+                normalizedName.contains("secret") ||
+                normalizedName.contains("password") ||
+                normalizedName.contains("api-key");
     }
 
     @Override

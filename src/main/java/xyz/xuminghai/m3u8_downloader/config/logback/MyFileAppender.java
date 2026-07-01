@@ -646,7 +646,7 @@ public class MyFileAppender extends FileAppender<ILoggingEvent> {
 
     private static final Path
             // 应用日志文件目录
-            APP_LOG_DIR = CommonData.APP_DIR.resolve("log"),
+            APP_LOG_DIR = CommonData.APP_LOG_DIR,
     // 日志文件路径
     LOG_FILE_PATH = APP_LOG_DIR.resolve("log.log"),
     // 临时日志文件位置

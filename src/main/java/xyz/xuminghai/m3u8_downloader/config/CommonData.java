@@ -629,6 +629,7 @@ package xyz.xuminghai.m3u8_downloader.config;
 import javafx.scene.image.Image;
 
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -641,9 +642,24 @@ import java.util.concurrent.Executors;
 public interface CommonData {
 
     /**
+     * 应用名称
+     */
+    String APP_NAME = "m3u8-downloader";
+
+    /**
      * 应用的工作目录
      */
     Path APP_DIR = Path.of(System.getProperty("user.dir"));
+
+    /**
+     * 应用数据目录
+     */
+    Path APP_DATA_DIR = defaultAppDataDir();
+
+    /**
+     * 应用日志目录
+     */
+    Path APP_LOG_DIR = APP_DATA_DIR.resolve("log");
 
     /**
      * 默认下载目录
@@ -694,5 +710,39 @@ public interface CommonData {
      * 帮助地址
      */
     String HELP_URI = HOME_URI + "/issues";
+
+    private static Path defaultAppDataDir() {
+        final String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        final String userHome = System.getProperty("user.home", ".");
+
+        if (osName.contains("win")) {
+            final String localAppData = blankToNull(System.getenv("LOCALAPPDATA"));
+            if (localAppData != null) {
+                return Path.of(localAppData, APP_NAME);
+            }
+            final String appData = blankToNull(System.getenv("APPDATA"));
+            if (appData != null) {
+                return Path.of(appData, APP_NAME);
+            }
+            return Path.of(userHome, "AppData", "Local", APP_NAME);
+        }
+
+        if (osName.contains("mac")) {
+            return Path.of(userHome, "Library", "Application Support", APP_NAME);
+        }
+
+        final String xdgDataHome = blankToNull(System.getenv("XDG_DATA_HOME"));
+        if (xdgDataHome != null) {
+            return Path.of(xdgDataHome, APP_NAME);
+        }
+        return Path.of(userHome, ".local", "share", APP_NAME);
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value;
+    }
 
 }

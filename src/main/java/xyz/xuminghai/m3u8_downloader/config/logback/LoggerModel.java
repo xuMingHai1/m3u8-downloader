@@ -628,14 +628,22 @@ package xyz.xuminghai.m3u8_downloader.config.logback;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.PatternLayout;
-import ch.qos.logback.classic.layout.TTLLLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.ConsoleAppender;
-import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.Layout;
 import ch.qos.logback.core.encoder.Encoder;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
+import ch.qos.logback.core.rolling.RollingFileAppender;
+import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
+import ch.qos.logback.core.util.FileSize;
+import xyz.xuminghai.m3u8_downloader.config.CommonData;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
 
 /**
  * 2024/1/2 17:32 星期二<br/>
@@ -653,7 +661,18 @@ public enum LoggerModel {
     /**
      * 文件
      */
-    FILE;
+    FILE,
+
+    /**
+     * 控制台和文件
+     */
+    BOTH;
+
+    private static final int MAX_HISTORY = 14;
+
+    private static final FileSize MAX_FILE_SIZE = FileSize.valueOf("10MB");
+
+    private static final FileSize TOTAL_SIZE_CAP = FileSize.valueOf("100MB");
 
 
     static LoggerModel modelOf(String model, LoggerModel defaultModel) {
@@ -661,38 +680,50 @@ public enum LoggerModel {
             return defaultModel;
         }
 
-        if (model.equalsIgnoreCase(CONSOLE.name())) {
-            return CONSOLE;
-        }
-
-        if (model.equalsIgnoreCase(FILE.name())) {
-            return FILE;
+        for (LoggerModel loggerModel : values()) {
+            if (model.equalsIgnoreCase(loggerModel.name())) {
+                return loggerModel;
+            }
         }
 
         return defaultModel;
     }
 
-    Appender<ILoggingEvent> createAppender(LoggerContext loggerContext) {
-        return createAppender(this, loggerContext);
-    }
-
-    private Appender<ILoggingEvent> createAppender(LoggerModel loggerModel, LoggerContext loggerContext) {
-        return switch (loggerModel) {
-            case CONSOLE -> createConsoleAppender(loggerContext);
-            case FILE -> createFileAppender(loggerContext);
+    List<Appender<ILoggingEvent>> createAppenders(LoggerContext loggerContext) {
+        return switch (this) {
+            case CONSOLE -> List.of(createConsoleAppender(loggerContext));
+            case FILE -> List.of(createFileAppender(loggerContext));
+            case BOTH -> List.of(createConsoleAppender(loggerContext), createFileAppender(loggerContext));
         };
     }
 
     private Appender<ILoggingEvent> createFileAppender(LoggerContext loggerContext) {
-        // 固定格式布局（加载时间快）
-        TTLLLayout ttllLayout = new TTLLLayout();
-        ttllLayout.setContext(loggerContext);
-        ttllLayout.start();
+        createLogDirectory();
+
+        // 模式布局
+        PatternLayout patternLayout = new PatternLayout();
+        patternLayout.setContext(loggerContext);
+        patternLayout.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] --- %logger{36} : %msg%n%ex");
+        patternLayout.start();
 
         // 文件附加器
-        FileAppender<ILoggingEvent> fileAppender = new MyFileAppender();
+        RollingFileAppender<ILoggingEvent> fileAppender = new RollingFileAppender<>();
         fileAppender.setContext(loggerContext);
-        fileAppender.setEncoder(createEncoder(loggerContext, ttllLayout));
+        fileAppender.setName("file");
+        fileAppender.setFile(CommonData.APP_LOG_DIR.resolve("app.log").toString());
+        fileAppender.setAppend(true);
+        fileAppender.setEncoder(createEncoder(loggerContext, patternLayout));
+
+        // 滚动策略：保留14天，单文件10MB，总量100MB
+        SizeAndTimeBasedRollingPolicy<ILoggingEvent> rollingPolicy = new SizeAndTimeBasedRollingPolicy<>();
+        rollingPolicy.setContext(loggerContext);
+        rollingPolicy.setParent(fileAppender);
+        rollingPolicy.setFileNamePattern(CommonData.APP_LOG_DIR.resolve("app.%d{yyyy-MM-dd}.%i.log").toString());
+        rollingPolicy.setMaxHistory(MAX_HISTORY);
+        rollingPolicy.setMaxFileSize(MAX_FILE_SIZE);
+        rollingPolicy.setTotalSizeCap(TOTAL_SIZE_CAP);
+        rollingPolicy.start();
+        fileAppender.setRollingPolicy(rollingPolicy);
         fileAppender.start();
 
         return fileAppender;
@@ -725,10 +756,20 @@ public enum LoggerModel {
         LayoutWrappingEncoder<ILoggingEvent> layoutWrappingEncoder = new LayoutWrappingEncoder<>();
         layoutWrappingEncoder.setContext(loggerContext);
         layoutWrappingEncoder.setLayout(layout);
+        layoutWrappingEncoder.setCharset(StandardCharsets.UTF_8);
         // 激活配置
         layoutWrappingEncoder.start();
 
         return layoutWrappingEncoder;
+    }
+
+    private void createLogDirectory() {
+        try {
+            Files.createDirectories(CommonData.APP_LOG_DIR);
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException("创建日志目录失败：" + CommonData.APP_LOG_DIR, e);
+        }
     }
 
 }

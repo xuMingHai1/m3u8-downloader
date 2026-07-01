@@ -654,7 +654,7 @@ public class LogbackConfig extends ContextAwareBase implements Configurator {
         // 日志级别
         rootLogger.setLevel(LOGGER_LEVEL);
         // 在root记录器添加附加器
-        rootLogger.addAppender(LOGGER_MODEL.createAppender(loggerContext));
+        LOGGER_MODEL.createAppenders(loggerContext).forEach(rootLogger::addAppender);
         // 注册系统关闭挂钩
         Runtime.getRuntime().addShutdownHook(Thread.ofPlatform()
                 .name("MyLogShutdownHook")
