@@ -642,10 +642,12 @@ import xyz.xuminghai.m3u8_downloader.util.BitstreamUtils;
 import xyz.xuminghai.m3u8_downloader.util.DirectoryUtils;
 import xyz.xuminghai.m3u8_downloader.util.DurationUtils;
 import xyz.xuminghai.m3u8_downloader.util.FileSizeUtils;
+import xyz.xuminghai.m3u8_downloader.util.LogMaskUtils;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -691,7 +693,8 @@ public class M3U8Task extends Task<Path> {
         lastM3U8.setOpaque(m3u8);
         currentM3U8.setOpaque(m3u8);
         m3u8HttpClient.setOpaque(new M3U8HttpClient(m3u8.timeout(), m3u8.downloadTempDirPath(), m3u8.proxySelector()));
-        log.info("M3U8任务创建完成，{}", m3u8);
+        log.info("M3U8任务创建完成，m3u8Uri = {}, filePath = {}, downloadTempDirPath = {}, timeout = {}",
+                LogMaskUtils.uri(m3u8.m3u8Uri()), m3u8.filePath(), m3u8.downloadTempDirPath(), m3u8.timeout());
     }
 
     private M3U8 getM3U8() {
@@ -764,6 +767,7 @@ public class M3U8Task extends Task<Path> {
         super.updateProgress(workDone = 0.08, totalWork);
 
         // 是否需要下载密钥
+        final Map<URI, byte[]> keyCache = new HashMap<>();
         for (int i = 0; i < playList.size(); i++) {
             final M3U8Key m3u8Key = playList.get(i).key();
             switch (m3u8Key.getMethod()) {
@@ -773,41 +777,44 @@ public class M3U8Task extends Task<Path> {
                 case AES_128 -> {
                     // key是唯一可变的
                     if (m3u8Key.getKey() == null) {
-                        log.info("AES-128加密方法，下载密钥");
-                        super.updateMessage("AES-128加密方法，正在下载密钥");
-                        final byte[] bytes;
-                        try {
-                            bytes = getM3U8HttpClient().downloadKey(m3u8Key.getUri());
-                        }
-                        catch (InterruptedException e) {
-                            // 不是暂停状态
-                            if (isNotPauseState()) {
+                        byte[] bytes = keyCache.get(m3u8Key.getUri());
+                        if (bytes == null) {
+                            log.info("AES-128加密方法，下载密钥");
+                            super.updateMessage("AES-128加密方法，正在下载密钥");
+                            try {
+                                bytes = getM3U8HttpClient().downloadKey(m3u8Key.getUri());
+                            }
+                            catch (InterruptedException e) {
+                                // 不是暂停状态
+                                if (isNotPauseState()) {
+                                    return null;
+                                }
+                                log.info("暂停aes-128密钥下载");
+                                super.updateMessage("暂停aes-128密钥下载");
+                                // 暂停等待恢复
+                                if (awaitResume()) {
+                                    log.info("恢复aes-128密钥下载");
+                                    i--;
+                                    continue;
+                                }
                                 return null;
                             }
-                            log.info("暂停aes-128密钥下载");
-                            super.updateMessage("暂停aes-128密钥下载");
-                            // 暂停等待恢复
-                            if (awaitResume()) {
-                                log.info("恢复aes-128密钥下载");
-                                i--;
-                                continue;
+                            catch (IOException e) {
+                                log.error("aes-128密钥下载异常", e);
+                                super.updateMessage("aes-128密钥下载异常");
+                                // 可重试失败
+                                retryableFailure(e);
+                                // 暂停等待恢复
+                                if (awaitResume()) {
+                                    log.info("重试aes-128密钥下载");
+                                    i--;
+                                    continue;
+                                }
+                                return null;
                             }
-                            return null;
+                            keyCache.put(m3u8Key.getUri(), bytes);
+                            log.info("AES-128密钥下载成功");
                         }
-                        catch (IOException e) {
-                            log.error("aes-128密钥下载异常", e);
-                            super.updateMessage("aes-128密钥下载异常");
-                            // 可重试失败
-                            retryableFailure(e);
-                            // 暂停等待恢复
-                            if (awaitResume()) {
-                                log.info("重试aes-128密钥下载");
-                                i--;
-                                continue;
-                            }
-                            return null;
-                        }
-                        log.info("AES-128密钥下载成功");
                         m3u8Key.setKey(bytes);
                     }
                 }

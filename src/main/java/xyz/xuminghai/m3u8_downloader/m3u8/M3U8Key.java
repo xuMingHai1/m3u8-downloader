@@ -658,7 +658,9 @@ public class M3U8Key {
      */
     private final byte[] iv;
 
-    public static M3U8Key NONE = new M3U8Key(KeyMethodEnum.NONE, null, null);
+    public static M3U8Key none() {
+        return new M3U8Key(KeyMethodEnum.NONE, null, null);
+    }
 
     public M3U8Key(KeyMethodEnum method, URI uri, byte[] iv) {
         this.method = method;
