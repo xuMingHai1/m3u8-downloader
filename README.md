@@ -14,6 +14,13 @@
 - 支持暂停、错误重试
 - 支持自动合并为 MP4
 
+## 使用须知
+
+本软件仅用于下载用户本人拥有、已获权利人授权或依法允许保存的内容。请勿将本软件用于未经许可
+规避或破坏 DRM、付费访问限制及其他版权保护技术措施，也不得下载、复制或传播侵权内容。
+
+用户应自行确认内容来源、授权范围和使用方式是否合法，并对自己的下载及后续使用行为负责。
+
 ## 软件截图
 
 ![应用截图](md_data/app.png)
@@ -86,6 +93,15 @@ Linux 或 macOS：
 - 发布流程：[docs/release-checklist.md](docs/release-checklist.md)
 - 分支保护建议：[docs/branch-protection.md](docs/branch-protection.md)
 - 版本记录：[CHANGELOG.md](CHANGELOG.md)
+
+## 许可证
+
+Copyright (C) 2024 xuMingHai。
+
+本项目采用 [GNU General Public License v3.0 or later](LICENSE) 许可证发布，对应 SPDX 标识为
+`GPL-3.0-or-later`。
+
+发布包包含的第三方开源组件及其许可证见 [第三方软件声明](THIRD-PARTY-NOTICES.md)。
 
 ## 项目地址
 

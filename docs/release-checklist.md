@@ -8,6 +8,7 @@
 - [ ] 更新 `CHANGELOG.md`。
 - [ ] 本地运行 `./mvnw.cmd test` 或 `./mvnw test`。
 - [ ] 如修改打包流程，至少验证一个平台的 `portable` profile。
+- [ ] 如修改运行时依赖或 FFmpeg 版本，同步更新 `THIRD-PARTY-NOTICES.md` 和许可证原文。
 
 ## 创建 Tag
 
@@ -29,5 +30,6 @@ git push origin v0.0.3
 
 - [ ] Release 中包含所有目标平台 zip。
 - [ ] 每个 zip 都有对应 `.sha256` 文件。
+- [ ] zip 包含 `LICENSE`、`THIRD-PARTY-NOTICES.md` 和 `third-party-licenses`。
 - [ ] Release notes 内容可读。
 - [ ] 下载并启动至少一个平台产物。

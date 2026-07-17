@@ -1,10 +1,6 @@
 /*
- * Copyright (C) 2024 xuMingHai 173535609@qq.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
+ * SPDX-FileCopyrightText: 2024 xuMingHai <173535609@qq.com>
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 package xyz.xuminghai.m3u8_downloader.util;
