@@ -646,9 +646,9 @@
         <javafx.version>26.0.2</javafx.version>
         <atlantafx.version>2.1.0</atlantafx.version>
         <devtoolsfx.version>1.0.1</devtoolsfx.version>
-        <logback.version>1.6.1</logback.version>
+        <logback.version>1.6.2</logback.version>
         <lombok.version>1.18.46</lombok.version>
-        <javacpp.ffmpeg.version>8.0.1-1.5.13</javacpp.ffmpeg.version>
+        <javacpp.ffmpeg.version>8.1.2-1.5.14</javacpp.ffmpeg.version>
         <sqlite.jdbc.version>3.53.2.0</sqlite.jdbc.version>
 
         <!-- Maven 插件版本 -->
