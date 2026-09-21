@@ -643,7 +643,7 @@
         <maven.compiler.target>26</maven.compiler.target>
 
         <!-- 依赖版本 -->
-        <javafx.version>26.0.2</javafx.version>
+        <javafx.version>27</javafx.version>
         <atlantafx.version>2.1.0</atlantafx.version>
         <devtoolsfx.version>1.0.1</devtoolsfx.version>
         <logback.version>1.6.3</logback.version>
